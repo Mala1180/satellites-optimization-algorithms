@@ -1,4 +1,5 @@
 import functools
+from os import abort
 import sys
 
 import numpy as np
@@ -12,17 +13,48 @@ import time
 dtos_file = open('data/day1_0/DTOs.json')
 ars_file = open('data/day1_0/ARs.json')
 constansts_file = open('data/day1_0/constants.json')
+paws_file = open('data/day1_0/PAWs.json')
+dlos_file = open('data/day1_0/DLOs.json')
 
 # loads JSON, the result is a dictionary
 dtos = json.loads(dtos_file.read())
 ars = json.loads(ars_file.read())
 constants = json.loads(constansts_file.read())
+paws = json.loads(paws_file.read())
+dlos = json.loads(dlos_file.read())
+
+def overlap(event1, event2):
+    return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time']
+
+# get rid of dtos overlapping with paws and dlos
+filtered_dtos = []
+for dto in dtos:
+    skip = False
+    for event in paws + dlos:
+        if (overlap(dto, event)):
+            skip = True
+            #print("qua")
+            break
+    if not skip:
+        filtered_dtos.append(dto)
+
+print(len(dtos))
+print(len(filtered_dtos))
+dtos = filtered_dtos
+
+# Number of DTOs overlapping with the first one
+count = 0
+for dto in dtos:
+    if (overlap(dto, dtos[0])):
+        count = count + 1
+print(count)
 
 CAPACITY = constants['MEMORY_CAP']
 DTOS_NUMBER = len(dtos)
 incidences = np.array(list(map(lambda dto: dto["incidence"], dtos)))
 memories = np.array(list(map(lambda dto: dto["memory"], dtos)))
 dtos_id = np.array(list(map(lambda dto: dto["id"], dtos)))
+
 
 # Read and solve model
 model = gp.Model()
@@ -53,6 +85,14 @@ from functools import reduce
 #     print(indexes[0])
 #     break
 
+for i1, dto1 in enumerate(dtos):
+    dto1_overlap = []
+    for i2, dto2 in enumerate(dtos):
+        if (overlap(dto1, dto2)):
+            dto1_overlap.append(i2)
+    print("Overlapping with dto " + str(i1) + ": " + str(len(dto1_overlap)))
+
+
 
 for dto1 in dtos:
     for dto2 in dtos:
@@ -64,7 +104,7 @@ for dto1 in dtos:
             # add overlapping contraints
             model.addConstr(gp.quicksum(variables_constraint) <= 1, "Overlapping constraint" + str(dtos.index(dto1)))
             #variables_constraint = []
-    print(variables_constraint)
+    print(len(variables_constraint))
     break
 
 
