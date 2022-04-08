@@ -3,7 +3,7 @@ import json
 import gurobipy as gp
 from gurobipy import GRB
 import time
-from utils.overlap import overlap
+from utils import overlap
 
 # read JSON files
 
