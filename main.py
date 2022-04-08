@@ -59,8 +59,8 @@ priorities = []
 for index_dto, dto in enumerate(dtos):
     priorities.append(next((ar['rank'] for ar in ars if ar['id'] == dto['ar_id']), None))
 
-memories = np.array(list(map(lambda dto: dto["memory"], dtos)))
-dtos_id = np.array(list(map(lambda dto: dto["id"], dtos)))
+memories = np.array(list(map(lambda dto_: dto_["memory"], dtos)))
+dtos_id = np.array(list(map(lambda dto_: dto_["id"], dtos)))
 
 # Read and solve model
 model = gp.Model()
@@ -69,7 +69,7 @@ print("Prepare variables and constraints...")
 start = time.time()
 
 # add the decision variable to the model
-variables = model.addMVar(DTOS_NUMBER, vtype=GRB.BINARY)
+variables = model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY)
 
 # for each couple of dtos which overlap add a constraint
 for i1, dto1 in enumerate(dtos):
@@ -80,8 +80,7 @@ for i1, dto1 in enumerate(dtos):
             # add overlapping contraints
             model.addConstr(variables[i1] + variables[i2] <= 1, "Overlapping constraint" + str(dtos.index(dto1)))
 
-    print("Overlapping with dto " + str(i1) + ": " + str(len(dto1_overlap)))
-
+    # print("Overlapping with dto " + str(i1) + ": " + str(len(dto1_overlap)))
 
 # add the memory constraint
 model.addConstr(gp.quicksum([memories[i] * variables[i] for i in range(DTOS_NUMBER)]) <= CAPACITY, "Memory constraint")
