@@ -1,20 +1,17 @@
-import functools
-from os import abort
-import sys
-
 import numpy as np
 import json
 import gurobipy as gp
 from gurobipy import GRB
 import time
+from utils.overlap import overlap
 
 # read JSON files
 
-dtos_file = open('data/day1_0/DTOs.json')
-ars_file = open('data/day1_0/ARs.json')
-constansts_file = open('data/day1_0/constants.json')
-paws_file = open('data/day1_0/PAWs.json')
-dlos_file = open('data/day1_0/DLOs.json')
+dtos_file = open('../data/day1_0/DTOs.json')
+ars_file = open('../data/day1_0/ARs.json')
+constansts_file = open('../data/day1_0/constants.json')
+paws_file = open('../data/day1_0/PAWs.json')
+dlos_file = open('../data/day1_0/DLOs.json')
 
 # loads JSON, the result is a dictionary
 dtos = json.loads(dtos_file.read())
@@ -24,16 +21,11 @@ paws = json.loads(paws_file.read())
 dlos = json.loads(dlos_file.read())
 
 
-def overlap(event1, event2):
-    return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time']
-
-
 # get rid of dtos overlapping with paws and dlos
 filtered_dtos = []
 for dto in dtos:
     skip = False
-    # for event in paws + dlos:
-    for event in paws:
+    for event in paws + dlos:
         if overlap(dto, event):
             skip = True
             break
