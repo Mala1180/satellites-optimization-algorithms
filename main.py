@@ -32,7 +32,8 @@ def overlap(event1, event2):
 filtered_dtos = []
 for dto in dtos:
     skip = False
-    for event in paws + dlos:
+    # for event in paws + dlos:
+    for event in paws:
         if overlap(dto, event):
             skip = True
             break
