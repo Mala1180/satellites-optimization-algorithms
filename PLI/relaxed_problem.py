@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import json
 import gurobipy as gp
@@ -6,7 +7,6 @@ import time
 from utils.overlap import overlap
 
 # read JSON files
-
 dtos_file = open('../data/day1_0/DTOs.json')
 ars_file = open('../data/day1_0/ARs.json')
 constansts_file = open('../data/day1_0/constants.json')
@@ -17,7 +17,6 @@ dtos = json.loads(dtos_file.read())
 ars = json.loads(ars_file.read())
 constants = json.loads(constansts_file.read())
 paws = json.loads(paws_file.read())
-
 
 # get rid of dtos overlapping with paws and dlos
 filtered_dtos = []
@@ -33,13 +32,6 @@ for dto in dtos:
 print(f"Total DTOs: {len(dtos)}")
 print(f"Filtered DTOs: {len(filtered_dtos)}")
 dtos = filtered_dtos
-
-# Number of DTOs overlapping with the first one
-# count = 0
-# for dto in dtos:
-#     if overlap(dto, dtos[0]):
-#         count = count + 1
-# print(count)
 
 CAPACITY = constants['MEMORY_CAP']
 DTOS_NUMBER = len(dtos)
@@ -59,24 +51,34 @@ model = gp.Model()
 print("Prepare variables and constraints...")
 start = time.time()
 
-# add the decision variable to the model
-variables = model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY)
+# add the decision variables to the model
+dtos_variables = list(model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY, name="DTOs"))
+
+grouped_dtos = dict()
 
 # for each couple of dtos which overlap add a constraint
 for i1, dto1 in enumerate(dtos):
-    dto1_overlap = []
     for i2, dto2 in enumerate(dtos):
         if overlap(dto1, dto2) and dto1 != dto2:
-            dto1_overlap.append(i2)
             # add overlapping contraints
-            model.addConstr(variables[i1] + variables[i2] <= 1, "Overlapping constraint" + str(dtos.index(dto1)))
+            model.addLConstr(dtos_variables[i1] + dtos_variables[i2] <= 1,
+                             f"Overlapping constraint for DTOs {dto1['id']} and {dto2['id']}")
 
-    # print("Overlapping with dto " + str(i1) + ": " + str(len(dto1_overlap)))
+    if dto1['ar_id'] not in grouped_dtos.keys():
+        grouped_dtos[dto1['ar_id']] = [dto1]
+    else:
+        grouped_dtos[dto1['ar_id']].append(dto1)
+
+# add the single satisfaction constraints
+for ar_id in grouped_dtos.keys():
+    model.addLConstr(gp.quicksum([dtos_variables[dtos.index(dto_)] for dto_ in grouped_dtos[ar_id]]) <= 1,
+                     f"Single satisfaction constraint for {ar_id}")
 
 # add the memory constraint
-model.addConstr(gp.quicksum([memories[i] * variables[i] for i in range(DTOS_NUMBER)]) <= CAPACITY, "Memory constraint")
+model.addLConstr(gp.quicksum([memories[i] * dtos_variables[i] for i in range(DTOS_NUMBER)]) <= CAPACITY,
+                 "Memory constraint")
 # set objective function to maximize dto's priority
-model.setObjective(gp.quicksum([priorities[i] * variables[i] for i in range(DTOS_NUMBER)]), GRB.MAXIMIZE)
+model.setObjective(gp.quicksum([priorities[i] * dtos_variables[i] for i in range(DTOS_NUMBER)]), GRB.MAXIMIZE)
 
 end = time.time()
 print("Preparation terminated in ", end - start)
@@ -95,6 +97,7 @@ if model.Status == GRB.INF_OR_UNBD:
 if model.Status == GRB.OPTIMAL:
     print('Optimal objective: %g' % model.ObjVal)
     print(model.getJSONSolution())
+    print(f'Number of constraints: {len(model.getConstrs())}')
     # print("RESOCONTO", model.display())
 elif model.Status != GRB.INFEASIBLE:
     print('Optimization was stopped with status %d' % model.Status)
