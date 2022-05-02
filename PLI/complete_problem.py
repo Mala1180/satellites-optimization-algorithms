@@ -102,7 +102,7 @@ model.addLConstr(satellite_memories[0] <= CAPACITY, f'Memory constraint DLO 0')
 
 for j in range(1, DLOS_NUMBER):
     satellite_memories.append(satellite_memories[j - 1] -
-                              gp.quicksum([memories[i] * x_ji[j][i - 1] for i in range(DTOS_NUMBER)]) +
+                              gp.quicksum([memories[i] * x_ji[j - 1][i] for i in range(DTOS_NUMBER)]) +
                               gp.quicksum([memories[i] * dtos_variables[i] for i, dto in enumerate(dtos)
                                            if dto['start_time'] > dlos[j - 1]['stop_time']
                                            and dto['stop_time'] < dlos[j]['start_time']]))
@@ -115,18 +115,18 @@ for j in range(DLOS_NUMBER):
         model.addLConstr(x_ji[j][i] <= dtos_variables[i], f'Downlink after acquisition constraint DLO:{j}, DTO:{i}')
 
 # add single downlink constraint
-# for i in range(DTOS_NUMBER):
-#     model.addLConstr(gp.quicksum([x_ji[j][i] for j in range(DLOS_NUMBER)]) <= 1)
+for i in range(DTOS_NUMBER):
+    model.addLConstr(gp.quicksum([x_ji[j][i] for j in range(DLOS_NUMBER)]) <= 1)
 
 # last two constraints can be reduced to the next one (maybe)
 # for i in range(DTOS_NUMBER):
 #     model.addLConstr(gp.quicksum([x_ji[j][i] for j in range(DLOS_NUMBER)]) <= dtos_variables[i])
 
 # add downloaded memory constraint
-# for j in range(DLOS_NUMBER):
-#     print(DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']))
-#     model.addLConstr(gp.quicksum([memories[i] * x_ji[j][i] for i in range(DTOS_NUMBER)]) <=
-#                      DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']), f'Downloaded memory constraint')
+for j in range(DLOS_NUMBER):
+    print(DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']))
+    model.addLConstr(gp.quicksum([memories[i] * x_ji[j][i] for i in range(DTOS_NUMBER)]) <=
+                     DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']), f'Downloaded memory constraint')
 
 # add time constraint
 for j in range(DLOS_NUMBER):
