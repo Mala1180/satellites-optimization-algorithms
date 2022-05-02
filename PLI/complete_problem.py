@@ -22,6 +22,7 @@ ars = json.loads(ars_file.read())
 constants = json.loads(constants_file.read())
 paws = json.loads(paws_file.read())
 dlos = json.loads(dlos_file.read())
+initial_dlos = dlos
 
 # get rid of dtos overlapping with paws and dlos
 filtered_dtos = []
@@ -38,10 +39,11 @@ dtos = filtered_dtos
 dlos = sorted(dlos, key=lambda dlo: dlo['start_time'])
 
 # add the dummy variable for some next constraints
-dummy_dlo = dlos[len(dlos) - 1]
+dummy_dlo = dlos[len(dlos) - 1].copy()
 dummy_dlo['start_time'] += 1
 dummy_dlo['stop_time'] = dummy_dlo['start_time']
 dlos.append(dummy_dlo)
+
 
 CAPACITY = constants['MEMORY_CAP']
 DOWNLINK_RATE = constants['DOWNLINK_RATE']
@@ -123,10 +125,14 @@ for i in range(DTOS_NUMBER):
 #     model.addLConstr(gp.quicksum([x_ji[j][i] for j in range(DLOS_NUMBER)]) <= dtos_variables[i])
 
 # add downloaded memory constraint
-for j in range(DLOS_NUMBER):
-    print(DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']))
-    model.addLConstr(gp.quicksum([memories[i] * x_ji[j][i] for i in range(DTOS_NUMBER)]) <=
-                     DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']), f'Downloaded memory constraint')
+# for j in range(DLOS_NUMBER):
+#     if j == 15:
+#         print(j)
+#     print(dlos[j]['stop_time'], " - ", dlos[j]['start_time'])
+#     print(dlos[j]['stop_time'] - dlos[j]['start_time'])
+#     print(DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']))
+#     model.addLConstr(gp.quicksum([memories[i] * x_ji[j][i] for i in range(DTOS_NUMBER)]) <=
+#                      DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']), f'Downloaded memory constraint')
 
 # add time constraint
 for j in range(DLOS_NUMBER):
@@ -163,6 +169,9 @@ if model.Status == GRB.OPTIMAL:
     # print(json_solution['Vars'] == json_old['Vars'])
     with open('../data/day1_0/result.json', 'w') as f:
         json.dump(json_solution, f)
+
+    with open('../data/day1_0/result_DLOs.json', 'w') as f:
+        json.dump(dlos, f)
 
 elif model.Status != GRB.INFEASIBLE:
     print('Optimization was stopped with status %d' % model.Status)
