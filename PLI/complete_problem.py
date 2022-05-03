@@ -7,6 +7,9 @@ import gurobipy as gp
 from gurobipy import GRB
 import time
 from utils.overlap import overlap
+import pandas as pd
+import matplotlib.pyplot as plt
+import re
 
 # read JSON files
 
@@ -39,11 +42,11 @@ dtos = filtered_dtos
 dlos = sorted(dlos, key=lambda dlo: dlo['start_time'])
 
 # add the dummy variable for some next constraints
+stop_time = max(dtos[len(dtos) - 1]['stop_time'], dlos[len(dlos) - 1]['stop_time'])
 dummy_dlo = dlos[len(dlos) - 1].copy()
-dummy_dlo['start_time'] += 1
+dummy_dlo['start_time'] = stop_time + 1
 dummy_dlo['stop_time'] = dummy_dlo['start_time']
 dlos.append(dummy_dlo)
-
 
 CAPACITY = constants['MEMORY_CAP']
 DOWNLINK_RATE = constants['DOWNLINK_RATE']
@@ -71,7 +74,7 @@ start = time.time()
 
 # add the decision variables to the model
 dtos_variables = list(model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY, name="DTOs"))
-dlos_variables = list(model.addMVar((DLOS_NUMBER,), vtype=GRB.BINARY, name="DLOs"))
+# dlos_variables = list(model.addMVar((DLOS_NUMBER,), vtype=GRB.BINARY, name="DLOs"))
 
 x_ji = []
 for index in range(DLOS_NUMBER):
@@ -111,10 +114,10 @@ for j in range(1, DLOS_NUMBER):
 
     model.addLConstr(satellite_memories[j] <= CAPACITY, f'Memory constraint DLO {j}')
 
-# add downlink after acquisition constraints
+# add constraint for downlink DTO, it must be chosen in the plan
 for j in range(DLOS_NUMBER):
     for i in range(DTOS_NUMBER):
-        model.addLConstr(x_ji[j][i] <= dtos_variables[i], f'Downlink after acquisition constraint DLO:{j}, DTO:{i}')
+        model.addLConstr(x_ji[j][i] <= dtos_variables[i], f'Downlink only if DTO is taken DLO:{j}, DTO:{i}')
 
 # add single downlink constraint
 for i in range(DTOS_NUMBER):
@@ -125,14 +128,15 @@ for i in range(DTOS_NUMBER):
 #     model.addLConstr(gp.quicksum([x_ji[j][i] for j in range(DLOS_NUMBER)]) <= dtos_variables[i])
 
 # add downloaded memory constraint
-# for j in range(DLOS_NUMBER):
-#     if j == 15:
-#         print(j)
-#     print(dlos[j]['stop_time'], " - ", dlos[j]['start_time'])
-#     print(dlos[j]['stop_time'] - dlos[j]['start_time'])
-#     print(DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']))
-#     model.addLConstr(gp.quicksum([memories[i] * x_ji[j][i] for i in range(DTOS_NUMBER)]) <=
-#                      DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']), f'Downloaded memory constraint')
+for j in range(DLOS_NUMBER):
+    if j == 15:
+        print(j)
+    print(dlos[j]['stop_time'], " - ", dlos[j]['start_time'])
+    print(dlos[j]['stop_time'] - dlos[j]['start_time'])
+    print(DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']))
+
+    model.addLConstr(gp.quicksum([memories[i] * x_ji[j][i] for i in range(DTOS_NUMBER)]) <=
+                     DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']), f'Downloaded memory constraint')
 
 # add time constraint
 for j in range(DLOS_NUMBER):
@@ -163,15 +167,44 @@ if model.Status == GRB.OPTIMAL:
     json_solution = json.loads(model.getJSONSolution())
     print(json_solution)
 
-    # json_old = json.loads(open('../data/day1_0/result.json').read())
-    # print(json_solution['Vars'])
-    # print(json_old['Vars'])
-    # print(json_solution['Vars'] == json_old['Vars'])
+    # take the DTOs in the plan
+    sol_dtos = [dtos[index] for index in range(DTOS_NUMBER) if dtos_variables[index].getAttr("X") == 1]
+    print(sol_dtos)
+    print(x_ji[0][0])
+
+    freed_memories = []
+    for j in range(DLOS_NUMBER):
+        freed_memory = 0
+        for i in range(DTOS_NUMBER):
+            if x_ji[j][i].getAttr("X") == 1:
+                freed_memory += dtos[i]['memory']
+
+        freed_memories.append(freed_memory)
+
+    print(freed_memories)
+
+    activities = sol_dtos + dlos
+    activities = sorted(activities, key=lambda activity_: activity_['start_time'])
+
+    tot_memory = 0
+    chronology_memories = []
+    for activity in activities:
+        if "memory" in activity:
+            tot_memory += activity['memory']
+        else:
+            tot_memory -= freed_memories[dlos.index(activity)]
+
+        chronology_memories.append(tot_memory)
+
+    print(chronology_memories)
+    xx = np.arange(len(chronology_memories))
+    plt.plot(xx, chronology_memories)
+    plt.title('Memory')
+    plt.show()
+
     with open('../data/day1_0/result.json', 'w') as f:
         json.dump(json_solution, f)
 
-    with open('../data/day1_0/result_DLOs.json', 'w') as f:
-        json.dump(dlos, f)
 
 elif model.Status != GRB.INFEASIBLE:
     print('Optimization was stopped with status %d' % model.Status)
