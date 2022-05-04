@@ -141,7 +141,7 @@ for j in range(DLOS_NUMBER):
 # add time constraint
 for j in range(DLOS_NUMBER):
     for i in range(DTOS_NUMBER):
-        if dlos[j]['start_time'] > dtos[i]['stop_time']:
+        if dlos[j]['start_time'] < dtos[i]['stop_time']:
             model.addLConstr(x_ji[j][i] == 0, f'Time constraint for DTO:{i}')
 
 # set objective function to maximize dto's priority
