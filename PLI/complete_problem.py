@@ -205,6 +205,7 @@ if model.Status == GRB.OPTIMAL:
     with open('../data/day1_0/result.json', 'w') as f:
         json.dump(json_solution, f)
 
+    model.write('model.lp')
 
 elif model.Status != GRB.INFEASIBLE:
     print('Optimization was stopped with status %d' % model.Status)
