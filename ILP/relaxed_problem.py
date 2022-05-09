@@ -60,7 +60,7 @@ grouped_dtos = dict()
 for i1, dto1 in enumerate(dtos):
     for i2, dto2 in enumerate(dtos):
         if overlap(dto1, dto2) and dto1 != dto2:
-            # add overlapping contraints
+            # add overlapping constraints
             model.addLConstr(dtos_variables[i1] + dtos_variables[i2] <= 1,
                              f"Overlapping constraint for DTOs {dto1['id']} and {dto2['id']}")
 

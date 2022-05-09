@@ -74,9 +74,9 @@ start = time.time()
 dtos_variables = list(model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY, name="DTOs"))
 # dlos_variables = list(model.addMVar((DLOS_NUMBER,), vtype=GRB.BINARY, name="DLOs"))
 
-x_ji = []
+z_ji = []
 for index in range(DLOS_NUMBER):
-    x_ji.append(list(model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY, name=f"DTOs_downloaded_in_DLO_{index}")))
+    z_ji.append(list(model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY, name=f"DTOs_downloaded_in_DLO_{index}")))
 
 grouped_dtos = dict()
 
@@ -105,7 +105,7 @@ model.addLConstr(satellite_memories[0] <= CAPACITY, f'Memory_constraint_DLO_0')
 
 for j in range(1, DLOS_NUMBER):
     satellite_memories.append(satellite_memories[j - 1] -
-                              gp.quicksum([memories[i] * x_ji[j - 1][i] for i in range(DTOS_NUMBER)]) +
+                              gp.quicksum([memories[i] * z_ji[j - 1][i] for i in range(DTOS_NUMBER)]) +
                               gp.quicksum([memories[i] * dtos_variables[i] for i, dto in enumerate(dtos)
                                            if dto['start_time'] > dlos[j - 1]['stop_time']
                                            and dto['stop_time'] < dlos[j]['start_time']]))
@@ -123,11 +123,11 @@ for j in range(1, DLOS_NUMBER):
 
 # last two constraints can be reduced to the next one (maybe)
 for i in range(DTOS_NUMBER):
-    model.addLConstr(gp.quicksum([x_ji[j][i] for j in range(DLOS_NUMBER)]) <= dtos_variables[i])
+    model.addLConstr(gp.quicksum([z_ji[j][i] for j in range(DLOS_NUMBER)]) <= dtos_variables[i])
 
 # add downloaded memory constraint
 for j in range(DLOS_NUMBER):
-    model.addLConstr(gp.quicksum([memories[i] * x_ji[j][i] for i in range(DTOS_NUMBER)]) <=
+    model.addLConstr(gp.quicksum([memories[i] * z_ji[j][i] for i in range(DTOS_NUMBER)]) <=
                      DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']),
                      f'Downloaded_memory_constraint_DLO_{j}')
 
@@ -135,7 +135,7 @@ for j in range(DLOS_NUMBER):
 for j in range(DLOS_NUMBER):
     for i in range(DTOS_NUMBER):
         if dlos[j]['start_time'] < dtos[i]['stop_time']:
-            model.addLConstr(x_ji[j][i] == 0, f'Time_constraint_for_DTO_{i}_DLO_{j}')
+            model.addLConstr(z_ji[j][i] == 0, f'Time_constraint_for_DTO_{i}_DLO_{j}')
 
 # set objective function to maximize dto's priority
 model.setObjective(gp.quicksum([priorities[i] * dtos_variables[i] for i in range(DTOS_NUMBER)]), GRB.MAXIMIZE)
@@ -170,7 +170,7 @@ if model.Status == GRB.OPTIMAL:
         downloaded = False
         j = 0
         while j < DLOS_NUMBER and not downloaded:
-            if x_ji[j][i].getAttr("X") == 1:
+            if z_ji[j][i].getAttr("X") == 1:
                 downloaded = True
                 dtos_downloaded.append(dtos[i])
             j = j + 1
@@ -186,7 +186,7 @@ if model.Status == GRB.OPTIMAL:
     for j in range(DLOS_NUMBER):
         freed_memory = 0
         for i in range(DTOS_NUMBER):
-            if x_ji[j][i].getAttr("X") == 1:
+            if z_ji[j][i].getAttr("X") == 1:
                 freed_memory += dtos[i]['memory']
 
         freed_memories.append(freed_memory)
@@ -218,7 +218,7 @@ if model.Status == GRB.OPTIMAL:
     #     print(json_solution['Vars'])
     #     print(old_json['Vars'] == json_solution['Vars'])
 
-    model.write('model.lp')
+    model.write(f'../data/{INSTANCE}/model.lp')
 
 elif model.Status != GRB.INFEASIBLE:
     print('Optimization was stopped with status %d' % model.Status)
