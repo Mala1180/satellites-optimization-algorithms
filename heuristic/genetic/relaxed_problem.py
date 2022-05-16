@@ -1,6 +1,6 @@
 import json
 import numpy as np
-from heuristic.genetic import Solution
+from heuristic.genetic.Chromosome import Chromosome
 from typing import List
 from utils.overlap import overlap
 
@@ -58,8 +58,10 @@ def fitness(solution: List[int], solution_index: int) -> float:
     return fitness_value
 
 
-initial_population = np.empty((4, DTOS_NUMBER))
-print(initial_population.shape)
+solution = Chromosome()
+solution.populate()
+
+
 
 ga = pygad.GA(num_generations=10,
               num_parents_mating=2,
@@ -69,15 +71,3 @@ ga = pygad.GA(num_generations=10,
               gene_type=int,
               parent_selection_type='sss',
               initial_population=initial_population)
-
-ga.run()
-ga.plot_fitness()
-# ga.plot_genes()
-
-sol, sol_fitness, sol_idx = ga.best_solution()
-print("Parameters of the best solution : {solution}".format(solution=sol))
-print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=sol_fitness))
-print("Index of the best solution : {solution_idx}".format(solution_idx=sol_idx))
-
-if ga.best_solution_generation != -1:
-    print(f"Best fitness value reached after {ga.best_solution_generation} generations.")
