@@ -9,13 +9,13 @@ from utils.overlap import overlap
 # read JSON files
 dtos_file = open('../data/day1_0/DTOs.json')
 ars_file = open('../data/day1_0/ARs.json')
-constansts_file = open('../data/day1_0/constants.json')
+constants_file = open('../data/day1_0/constants.json')
 paws_file = open('../data/day1_0/PAWs.json')
 
 # loads JSON, the result is a dictionary
 dtos = json.loads(dtos_file.read())
 ars = json.loads(ars_file.read())
-constants = json.loads(constansts_file.read())
+constants = json.loads(constants_file.read())
 paws = json.loads(paws_file.read())
 
 # get rid of dtos overlapping with paws and dlos
