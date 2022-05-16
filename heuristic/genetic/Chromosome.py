@@ -1,50 +1,47 @@
-from typing import List, TypeVar
+from typing import TypeVar, List
 
-from heuristic.genetic.Gene import Gene
-
-Event = TypeVar("Event")
+DTO = TypeVar("DTO")
 
 
 class Chromosome:
-    """ A linked list of Genes """
+    """ A class that represents a possible solution of GeneticAlgorithm class """
 
-    def __init__(self) -> None:
-        self.head_gene = None
-        self.length = 0
+    def __init__(self, dtos: List[DTO] = None) -> None:
+        """ If no argument is given, creates an empty solution, otherwise a solution with given DTOs  """
+        if dtos is None:
+            dtos = []
+        self.dtos = dtos
 
     def print(self) -> None:
-        gene = self.head_gene
-        while gene is not None:
-            print(f' -> {gene.print()}')
-            gene = gene.next
+        print(self.dtos)
 
     def count(self) -> int:
-        return self.length
+        return len(self.dtos)
 
-    def head_insert(self, gene: Gene) -> None:
-        self.length += 1
-        new_gene = Gene(gene.id, gene.start_time, gene.stop_time, gene.memory)
-        new_gene.next = self.head_gene
-        self.head_gene = new_gene
+    def add_dto(self, dto: DTO) -> None:
+        self.dtos.append(dto)
 
-    def tail_insert(self, gene: Gene) -> None:
-        self.length += 1
-        new_gene = Gene(gene.id, gene.start_time, gene.stop_time, gene.memory)
-        if self.head_gene is None:
-            self.head_gene = new_gene
-            return
+    def add_dto_at(self, dto: DTO, index: int) -> None:
+        self.dtos.insert(index, dto)
 
-        gene = self.headval
-        while gene.nextval is not None:
-            gene = gene.nextval
-        gene.next = new_gene
+    def remove_dto(self, dto: DTO) -> None:
+        self.dtos.remove(dto)
 
-    def index_insert(self, gene: Gene, index: int) -> bool:
-        new_gene = Gene(gene.id, gene.start_time, gene.stop_time, gene.memory)
-        if index > self.count() - 1 or index < 0:
-            return False
-        self.length += self.length + 1
+    def remove_dto_at(self, index: int) -> None:
+        self.dtos.pop(index)
+
+    def get_memories(self):
+        return list(map(lambda dto_: dto_['memory'], self.dtos))
+
+    def get_priorities(self):
+        return list(map(lambda dto_: dto_['priority'], self.dtos))
+
+    def get_tot_memory(self):
+        return sum(self.get_memories())
+
+    def get_tot_priority(self):
+        return sum(self.get_priorities())
 
     @staticmethod
-    def overlap(event1: Event, event2: Event):
+    def overlap(event1: DTO, event2: DTO):
         return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time']

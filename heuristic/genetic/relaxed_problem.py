@@ -2,6 +2,8 @@ import json
 import numpy as np
 from heuristic.genetic.Chromosome import Chromosome
 from typing import List
+
+from heuristic.genetic.GeneticAlgorithm import GeneticAlgorithm
 from utils.overlap import overlap
 
 INSTANCE = 'day1_0'
@@ -28,6 +30,7 @@ DTOS_NUMBER: int = len(dtos)
 # populate array of priorities
 for index_dto, dto in enumerate(dtos):
     priorities.append(next((ar['rank'] for ar in ars if ar['id'] == dto['ar_id']), None))
+    dto['priority'] = priorities[index_dto]
 
 
 def fitness(solution: List[int], solution_index: int) -> float:
@@ -58,16 +61,14 @@ def fitness(solution: List[int], solution_index: int) -> float:
     return fitness_value
 
 
-solution = Chromosome()
-solution.populate()
+ga = GeneticAlgorithm(CAPACITY, dtos)
+ga.print_population()
 
-
-
-ga = pygad.GA(num_generations=10,
-              num_parents_mating=2,
-              fitness_func=fitness,
-              num_genes=DTOS_NUMBER,
-              gene_space=[0, 1],
-              gene_type=int,
-              parent_selection_type='sss',
-              initial_population=initial_population)
+# ga = pygad.GA(num_generations=10,
+#               num_parents_mating=2,
+#               fitness_func=fitness,
+#               num_genes=DTOS_NUMBER,
+#               gene_space=[0, 1],
+#               gene_type=int,
+#               parent_selection_type='sss',
+#               initial_population=initial_population)
