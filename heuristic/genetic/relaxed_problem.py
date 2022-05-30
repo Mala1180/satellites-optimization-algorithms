@@ -33,35 +33,36 @@ for index_dto, dto in enumerate(dtos):
     dto['priority'] = priorities[index_dto]
 
 
-def fitness(solution: List[int], solution_index: int) -> float:
-    mask = np.where(solution == 1, True, False)
-    solution_memories = np.where(solution == 1, memories, 0)
-    fitness_value: float = 0
-
-    if np.sum(solution_memories) > CAPACITY:
-        fitness_value = fitness_value - 5 * (CAPACITY - np.sum(solution_memories))
-
-    for i1, dto1 in enumerate(dtos):
-        # if the dto1 is in the plan
-        if solution[i1] == 1:
-
-            # overlap with paws constraint
-            for paw in paws:
-                if overlap(dto1, paw):
-                    fitness_value = fitness_value - 50
-
-            # overlap with other dtos constraint
-            for i2, dto2 in enumerate(dtos):
-                # if the dto1 is in the plan
-                if solution[i2] == 1:
-                    if overlap(dto1, dto2) and dto1 != dto2:
-                        fitness_value = fitness_value - 20
-
-    fitness_value = fitness_value + np.sum(np.where(solution == 1, priorities, 0))
-    return fitness_value
+# def fitness(solution: List[int], solution_index: int) -> float:
+#     mask = np.where(solution == 1, True, False)
+#     solution_memories = np.where(solution == 1, memories, 0)
+#     fitness_value: float = 0
+#
+#     if np.sum(solution_memories) > CAPACITY:
+#         fitness_value = fitness_value - 5 * (CAPACITY - np.sum(solution_memories))
+#
+#     for i1, dto1 in enumerate(dtos):
+#         # if the dto1 is in the plan
+#         if solution[i1] == 1:
+#
+#             # overlap with paws constraint
+#             for paw in paws:
+#                 if overlap(dto1, paw):
+#                     fitness_value = fitness_value - 50
+#
+#             # overlap with other dtos constraint
+#             for i2, dto2 in enumerate(dtos):
+#                 # if the dto1 is in the plan
+#                 if solution[i2] == 1:
+#                     if overlap(dto1, dto2) and dto1 != dto2:
+#                         fitness_value = fitness_value - 20
+#
+#     fitness_value = fitness_value + np.sum(np.where(solution == 1, priorities, 0))
+#     return fitness_value
 
 
 ga = GeneticAlgorithm(CAPACITY, dtos)
+ga.run()
 ga.print_population()
 
 # ga = pygad.GA(num_generations=10,
