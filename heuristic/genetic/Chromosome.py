@@ -1,6 +1,6 @@
 from typing import TypeVar, List
-
-DTO = TypeVar("DTO")
+import numpy as np
+from heuristic.genetic.vars import DTO
 
 
 class Chromosome:
@@ -37,10 +37,10 @@ class Chromosome:
         return list(map(lambda dto_: dto_['priority'], self.dtos))
 
     def get_tot_memory(self):
-        return sum(self.get_memories())
+        return np.sum(np.array(self.get_memories()))
 
     def get_tot_priority(self):
-        return sum(self.get_priorities())
+        return np.sum(np.array(self.get_priorities()))
 
     @staticmethod
     def overlap(event1: DTO, event2: DTO):

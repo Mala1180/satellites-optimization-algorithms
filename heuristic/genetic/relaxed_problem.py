@@ -64,7 +64,7 @@ for index_dto, dto in enumerate(dtos):
 ga = GeneticAlgorithm(CAPACITY, dtos)
 ga.run()
 ga.print_population()
-
+ga.plot_fitness_values()
 # ga = pygad.GA(num_generations=10,
 #               num_parents_mating=2,
 #               fitness_func=fitness,
