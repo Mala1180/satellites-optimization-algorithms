@@ -27,13 +27,13 @@ class GeneticAlgorithm:
         for i in range(num_chromosomes):
             memory: float = 0
             chromosome = Chromosome()
+
             while memory < capacity:
-                for dto_to_insert in self.total_dtos:
-                    overlaps = [not overlap(dto_to_insert, dto_inserted) for dto_inserted in chromosome.dtos]
-                    if all(overlaps):
-                        chromosome.add_dto(dto_to_insert)
-                        memory += dto_to_insert['memory']
-                        break
+                index: int = randrange(len(total_dtos))
+                dto_to_insert: DTO = total_dtos[index]
+                if dto_to_insert not in chromosome.dtos:
+                    chromosome.add_dto(dto_to_insert)
+                    memory += dto_to_insert['memory']
 
             self.population.append(chromosome)
 
