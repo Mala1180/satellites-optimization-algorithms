@@ -1,20 +1,24 @@
+from random import randrange, uniform, sample
+from typing import List
+
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List
-from random import randrange
+
 from heuristic.genetic.Chromosome import Chromosome
 from heuristic.genetic.vars import DTO
+from utils.overlap import overlap
 
 
 class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
     def __init__(self, capacity, total_dtos, num_generations=10, num_chromosomes=5, num_elites=2) -> None:
-        """ Creates a random initial population """
+        """ Creates a random initial population and does preliminary stuffs """
         self.total_dtos: [DTO] = total_dtos
         self.num_generations: int = num_generations
         self.num_elites: int = num_elites
         self.elites: [Chromosome] = []
+        self.parents: [(Chromosome, Chromosome)] = []
         self.fitness_history: [float] = []
         self.population: [Chromosome] = []
         self.population_fitness: [float] = []
@@ -24,58 +28,85 @@ class GeneticAlgorithm:
             memory: float = 0
             chromosome = Chromosome()
             while memory < capacity:
-                index: int = randrange(len(total_dtos))
-                dto_to_insert: DTO = self.total_dtos[index]
-                chromosome.add_dto(dto_to_insert)
-                memory += dto_to_insert['memory']
+                for dto_to_insert in self.total_dtos:
+                    overlaps = [not overlap(dto_to_insert, dto_inserted) for dto_inserted in chromosome.dtos]
+                    if all(overlaps):
+                        chromosome.add_dto(dto_to_insert)
+                        memory += dto_to_insert['memory']
+                        break
+
             self.population.append(chromosome)
 
-        self.update_population_fitness()
-
     @staticmethod
-    def fitness(chromosome: Chromosome) -> float:
-        """ Calculates and returns the fitness value of a single chromosome """
+    def fitness(dto: DTO) -> float:
+        """ Calculates and returns the fitness value of a single DTO """
+        # fitness_value: float = 0
+        return dto['priority']
+
+    def update_chromosome_fitness(self, chromosome: Chromosome):
+        """ Updates the fitness value of a chromosome and of each dto """
         fitness_value: float = 0
         for dto in chromosome.dtos:
-            fitness_value += dto['priority']
-        return fitness_value
+            dto_fitness = self.fitness(dto)
+            fitness_value += dto_fitness
+            dto['fitness'] = dto_fitness
+        chromosome.fitness = fitness_value
 
     def update_population_fitness(self):
-        """ Calculates and update the fitness value of the entire population """
+        """ Updates the fitness value of the entire population """
         self.population_tot_fitness = 0
+        self.population_fitness = []
+
         for chromosome in self.population:
-            fitness_value = self.fitness(chromosome)
-            self.population_fitness.append(fitness_value)
-            self.population_tot_fitness += fitness_value
+            self.update_chromosome_fitness(chromosome)
+            self.population_fitness.append(chromosome.fitness)
+            self.population_tot_fitness += chromosome.fitness
 
     def elitism(self):
         """ Defines the elites for the current generation """
         self.elites = []
         for _ in range(self.num_elites):
-            elite = max(self.population, key=lambda chromosome: chromosome.get_tot_priority())
+            elite = max(self.population, key=lambda chromosome: chromosome.fitness)
             self.elites.append(elite)
 
     def parent_selection(self) -> [Chromosome]:
-        """ Chooses and returns the chromosomes to make crossover with """
-        parents: [Chromosome] = []
-        num_best_chromosome = 2  # len(self.population) / 5
-        for _ in range(num_best_chromosome):
-            parent_index = randrange(len(self.population))
-            parents.append(parents[parent_index])
+        """ Chooses and returns the chromosomes to make crossover with roulette wheel selection method """
+        self.parents = []
 
-        return parents
+        # finds number of couples equals to population length - elites length
+        for i in range(len(self.population) - len(self.elites)):
+            # random number for roulette pick
+            pick: float = uniform(0, self.population_tot_fitness)
+            current: float = 0
+            # random chromosome to instantiate the first parent variable
+            parent1: Chromosome = self.population[randrange(0, len(self.population))]
+
+            # picks the first parent with roulette wheel method
+            for index, chromosome in enumerate(self.population):
+                current += chromosome.fitness / self.population_tot_fitness
+                if current > pick:
+                    parent1 = chromosome
+                    break
+
+            # picks the second parent randomly within the population
+            parent2 = self.population[randrange(0, len(self.population))]
+            self.parents.append((parent1, parent2))
 
     def crossover(self):
-        pass
+        """ Makes crossover between each couple of parents, and replaces the entire population except
+            elites with the new offspring """
+
+        sons: [Chromosome] = []
+        for parent1, parent2 in self.parents:
+            rand1, rand2 = sample(range(0, len(parent1.dtos)), 2)
+            i1, i2 = (rand1, rand2) if rand1 <= rand2 else (rand2, rand1)
+            son_dtos = parent1.dtos[:i1] + parent2.dtos[i1:i2] + parent1.dtos[i2:]
+            sons.append(Chromosome(son_dtos))
+
+        self.population = self.elites + sons
 
     def mutation(self):
         pass
-
-    def create_new_population(self, new_chromosomes: List[Chromosome]):
-        """ Replace some chromosomes of new population with the newer ones """
-        num_worst_chromosome = 2
-        for i in range(num_worst_chromosome):
-            min(self.population_fitness)
 
     def run(self):
         for i in range(self.num_generations):
@@ -84,6 +115,8 @@ class GeneticAlgorithm:
             self.fitness_history.append(self.population_tot_fitness)
             print(f'Fitness: {self.population_tot_fitness}')
             self.elitism()
+            self.parent_selection()
+            self.crossover()
 
     def print_population(self):
         print(f'Population : [')
@@ -93,6 +126,7 @@ class GeneticAlgorithm:
             print(f'    - Total priority: {chromosome.get_tot_priority()})')
 
         print(']')
+        print(f'Number of chromosomes: {len(self.population)}')
 
     def plot_fitness_values(self):
         plt.plot(np.arange(0, self.num_generations), self.fitness_history)

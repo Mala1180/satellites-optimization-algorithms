@@ -11,6 +11,7 @@ class Chromosome:
         if dtos is None:
             dtos = []
         self.dtos = dtos
+        self.fitness = 0
 
     def print(self) -> None:
         print(self.dtos)
