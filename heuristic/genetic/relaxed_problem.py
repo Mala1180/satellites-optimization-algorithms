@@ -33,5 +33,6 @@ ga.run()
 ga.print_population()
 ga.plot_fitness_values()
 
+solution = ga.get_best_solution()
 
-print(ga.population[0].get_priorities())
+print(f'Best solution: {solution}')

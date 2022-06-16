@@ -1,12 +1,10 @@
 from random import randrange, uniform, sample
-from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from heuristic.genetic.Chromosome import Chromosome
 from heuristic.genetic.vars import DTO
-from utils.overlap import overlap
 
 
 class GeneticAlgorithm:
@@ -38,16 +36,17 @@ class GeneticAlgorithm:
             self.population.append(chromosome)
 
     @staticmethod
-    def fitness(dto: DTO) -> float:
+    def fitness(dto: DTO, min_priority: float, max_priority: float) -> float:
         """ Calculates and returns the fitness value of a single DTO """
         # fitness_value: float = 0
-        return dto['priority']
+        # return dto['priority']
+        return (dto['priority'] - min_priority) / (max_priority - min_priority)
 
     def update_chromosome_fitness(self, chromosome: Chromosome):
         """ Updates the fitness value of a chromosome and of each dto """
         fitness_value: float = 0
         for dto in chromosome.dtos:
-            dto_fitness = self.fitness(dto)
+            dto_fitness = self.fitness(dto, chromosome.get_min_priority(), chromosome.get_max_priority())
             fitness_value += dto_fitness
             dto['fitness'] = dto_fitness
         chromosome.fitness = fitness_value
@@ -117,6 +116,9 @@ class GeneticAlgorithm:
             self.elitism()
             self.parent_selection()
             self.crossover()
+
+    def get_best_solution(self) -> Chromosome:
+        return max(self.population, key=lambda chromosome: chromosome.fitness)
 
     def print_population(self):
         print(f'Population : [')

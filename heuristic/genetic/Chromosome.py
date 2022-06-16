@@ -1,4 +1,3 @@
-from typing import TypeVar, List
 import numpy as np
 from heuristic.genetic.vars import DTO
 
@@ -6,7 +5,7 @@ from heuristic.genetic.vars import DTO
 class Chromosome:
     """ A class that represents a possible solution of GeneticAlgorithm class """
 
-    def __init__(self, dtos: List[DTO] = None) -> None:
+    def __init__(self, dtos: [DTO] = None) -> None:
         """ If no argument is given, creates an empty solution, otherwise a solution with given DTOs  """
         if dtos is None:
             dtos = []
@@ -31,17 +30,23 @@ class Chromosome:
     def remove_dto_at(self, index: int) -> None:
         self.dtos.pop(index)
 
-    def get_memories(self):
+    def get_memories(self) -> [float]:
         return list(map(lambda dto_: dto_['memory'], self.dtos))
 
-    def get_priorities(self):
+    def get_priorities(self) -> [float]:
         return list(map(lambda dto_: dto_['priority'], self.dtos))
 
-    def get_tot_memory(self):
-        return np.sum(np.array(self.get_memories()))
+    def get_tot_memory(self) -> float:
+        return float(np.sum(np.array(self.get_memories())))
 
-    def get_tot_priority(self):
-        return np.sum(np.array(self.get_priorities()))
+    def get_tot_priority(self) -> float:
+        return float(np.sum(np.array(self.get_priorities())))
+
+    def get_min_priority(self) -> float:
+        return float(np.min(np.array(self.get_priorities())))
+
+    def get_max_priority(self) -> float:
+        return float(np.max(np.array(self.get_priorities())))
 
     @staticmethod
     def overlap(event1: DTO, event2: DTO):
