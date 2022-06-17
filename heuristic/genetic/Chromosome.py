@@ -14,8 +14,12 @@ class Chromosome:
         self.tot_memory: float = sum(self.get_memories())
         self.ars_served = np.array([dto_['ar_id'] for dto_ in self.dtos])
 
+    def __str__(self) -> str:
+        return f'Fitness: {self.tot_fitness},\nMemory occupied: {self.tot_memory},' \
+               f'\nDTOs taken: {self.dtos},\nARs served: {self.ars_served}'
+
     def print(self) -> None:
-        print(self.dtos, f'Fitness: {self.tot_fitness} Memory occupied: {self.tot_memory}')
+        print(self)
 
     def size(self) -> int:
         return len(self.dtos)
@@ -33,7 +37,7 @@ class Chromosome:
                 return False
             insert_point = np.extract(condition, self.dtos)
             index = self.dtos.index(insert_point) + 1
-        # self.dtos = np.insert(self.dtos, index, dto)
+
         self.dtos.insert(index, dto)
         self.tot_memory += dto['memory']
         self.tot_fitness += dto['priority']
@@ -41,7 +45,7 @@ class Chromosome:
         return True
 
     def remove_dto(self, dto: DTO) -> bool:
-        if len(self.dtos) == 0:
+        if len(self.dtos) == 0 or not np.isin(dto, self.dtos):
             return False
         index = np.searchsorted(self.dtos, dto)
         self.dtos = np.delete(self.dtos, index)

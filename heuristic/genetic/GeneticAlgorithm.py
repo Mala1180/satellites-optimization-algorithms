@@ -13,6 +13,7 @@ class GeneticAlgorithm:
     def __init__(self, capacity, total_dtos, num_generations=10, num_chromosomes=5) -> None:
         """ Creates a random initial population and does preliminary stuffs """
         self.capacity = capacity
+        print(f'Capacity: {capacity}')
         self.total_dtos: [DTO] = total_dtos
         # self.ars: [AR] = ars
         self.num_generations: int = num_generations
@@ -30,8 +31,8 @@ class GeneticAlgorithm:
                 if chromosome.size() == 0 or \
                         (not np.isin(dto['ar_id'], chromosome.get_ars_served())
                          and memory + dto['memory'] <= self.capacity):
-                    chromosome.add_dto(dto)
-                    memory += dto['memory']
+                    if chromosome.add_dto(dto):
+                        memory += dto['memory']
 
             self.population.append(chromosome)
 
@@ -114,7 +115,7 @@ class GeneticAlgorithm:
 
     def plot_fitness_values(self):
         history = np.array(self.fitness_history)
-        for i in range(self.num_generations):
-            plt.plot(np.arange(0, self.num_generations), history[:, 1])
+        for i in range(len(history[0, :])):
+            plt.plot(np.arange(0, self.num_generations), history[:, i])
         plt.title('Fitness values - Generations')
         plt.show()
