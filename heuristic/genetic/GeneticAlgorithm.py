@@ -4,14 +4,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from heuristic.genetic.Chromosome import Chromosome
-from heuristic.genetic.vars import DTO, AR
+from heuristic.genetic.vars import DTO
 
 
 class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
     def __init__(self, capacity, total_dtos, num_generations=10, num_chromosomes=5) -> None:
-        """ Creates a random initial population and does preliminary stuffs """
+        """ Creates a random initial population and prepares data for the algorithm """
         self.capacity = capacity
         print(f'Capacity: {capacity}')
         self.total_dtos: [DTO] = total_dtos
@@ -23,16 +23,12 @@ class GeneticAlgorithm:
         self.population: [Chromosome] = []
 
         for i in range(num_chromosomes):
-            memory: float = 0
             chromosome = Chromosome()
 
             shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
             for dto in shuffled_dtos:
-                if chromosome.size() == 0 or \
-                        (not np.isin(dto['ar_id'], chromosome.get_ars_served())
-                         and memory + dto['memory'] <= self.capacity):
-                    if chromosome.add_dto(dto):
-                        memory += dto['memory']
+                if chromosome.size() == 0 or self.keeps_feasibility(chromosome, dto):
+                    chromosome.add_dto(dto)
 
             self.population.append(chromosome)
 
@@ -73,6 +69,7 @@ class GeneticAlgorithm:
         pass
 
     def run(self):
+        """ Starts the algorithm itself """
         for i in range(self.num_generations):
             print(f'Generation {i + 1}')
             chromosome_fitness = [chromosome.get_tot_fitness() for chromosome in self.population]
@@ -83,7 +80,14 @@ class GeneticAlgorithm:
             self.crossover()
 
     def get_best_solution(self) -> Chromosome:
+        """ Returns the best solution in the population after running of the algorithm """
         return max(self.population, key=lambda chromosome: chromosome.get_tot_fitness())
+
+    def keeps_feasibility(self, chromosome: Chromosome, dto: DTO):
+        """ Returns True if the solution keeps feasibility if the DTO would be added """
+        return not np.isin(dto['ar_id'], chromosome.get_ars_served()) \
+               and chromosome.get_tot_memory() + dto['memory'] <= self.capacity \
+               and np.any([chromosome.overlap(dto, dto_test) for dto_test in chromosome.dtos])
 
     def is_solution_feasible(self, chromosome: Chromosome) -> bool:
         """ Checks if a solution is feasible or not """
@@ -103,6 +107,7 @@ class GeneticAlgorithm:
         return True
 
     def print_population(self):
+        """ Prints all solutions and the relative info """
         print(f'Population : [')
         for chromosome in self.population:
             print(f'   ({chromosome.dtos},')
@@ -114,6 +119,7 @@ class GeneticAlgorithm:
         print(f'Number of chromosomes: {len(self.population)}')
 
     def plot_fitness_values(self):
+        """ Plots how the fitness of each solution changes over the generations """
         history = np.array(self.fitness_history)
         for i in range(len(history[0, :])):
             plt.plot(np.arange(0, self.num_generations), history[:, i])

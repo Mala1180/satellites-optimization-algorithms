@@ -80,4 +80,5 @@ class Chromosome:
 
     @staticmethod
     def overlap(event1: DTO, event2: DTO):
+        """ Returns True if events overlap, False otherwise """
         return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time']
