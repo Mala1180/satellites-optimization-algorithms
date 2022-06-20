@@ -87,7 +87,7 @@ class GeneticAlgorithm:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
         return not np.isin(dto['ar_id'], chromosome.get_ars_served()) \
                and chromosome.get_tot_memory() + dto['memory'] <= self.capacity \
-               and np.any([chromosome.overlap(dto, dto_test) for dto_test in chromosome.dtos])
+               and not np.any([chromosome.overlap(dto, dto_test) for dto_test in chromosome.dtos])
 
     def is_solution_feasible(self, chromosome: Chromosome) -> bool:
         """ Checks if a solution is feasible or not """
