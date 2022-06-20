@@ -98,7 +98,7 @@ class GeneticAlgorithm:
         # overlap constraint check
         for dto1 in chromosome.dtos:
             for dto2 in chromosome.dtos:
-                if chromosome.overlap(dto1, dto2):
+                if chromosome.overlap(dto1, dto2) and dto1 != dto2:
                     return False
 
         # single satisfaction check
