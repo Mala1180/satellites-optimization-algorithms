@@ -15,7 +15,6 @@ class GeneticAlgorithm:
         self.capacity = capacity
         print(f'Capacity: {capacity}')
         self.total_dtos: [DTO] = total_dtos
-        # self.ars: [AR] = ars
         self.num_generations: int = num_generations
         self.elite: Chromosome = Chromosome()
         self.parents: [(Chromosome, Chromosome)] = []
@@ -27,7 +26,7 @@ class GeneticAlgorithm:
 
             shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
             for dto in shuffled_dtos:
-                if chromosome.size() == 0 or self.keeps_feasibility(chromosome, dto):
+                if chromosome.size() == 0 or chromosome.keeps_feasibility(dto, self.capacity):
                     chromosome.add_dto(dto)
 
             self.population.append(chromosome)
@@ -83,29 +82,6 @@ class GeneticAlgorithm:
         """ Returns the best solution in the population after running of the algorithm """
         return max(self.population, key=lambda chromosome: chromosome.get_tot_fitness())
 
-    def keeps_feasibility(self, chromosome: Chromosome, dto: DTO):
-        """ Returns True if the solution keeps feasibility if the DTO would be added """
-        return not np.isin(dto['ar_id'], chromosome.get_ars_served()) \
-               and chromosome.get_tot_memory() + dto['memory'] <= self.capacity \
-               and not np.any([chromosome.overlap(dto, dto_test) for dto_test in chromosome.dtos])
-
-    def is_solution_feasible(self, chromosome: Chromosome) -> bool:
-        """ Checks if a solution is feasible or not """
-        # memory constraint check
-        if chromosome.get_tot_memory() > self.capacity:
-            return False
-
-        # overlap constraint check
-        for dto1 in chromosome.dtos:
-            for dto2 in chromosome.dtos:
-                if chromosome.overlap(dto1, dto2) and dto1 != dto2:
-                    return False
-
-        # single satisfaction check
-        if len(np.unique(chromosome.get_ars_served())) != len(chromosome.get_ars_served()):
-            return False
-        return True
-
     def print_population(self):
         """ Prints all solutions and the relative info """
         print(f'Population : [')
@@ -113,7 +89,7 @@ class GeneticAlgorithm:
             print(f'   ({chromosome.dtos},')
             print(f'    - Memory occupied: {chromosome.get_tot_memory()},')
             print(f'    - Total priority: {chromosome.get_tot_fitness()})')
-            print(f'    - Feasible: {self.is_solution_feasible(chromosome)})')
+            print(f'    - Feasible: {chromosome.is_feasible(self.capacity)})')
 
         print(']')
         print(f'Number of chromosomes: {len(self.population)}')

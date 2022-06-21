@@ -1,3 +1,4 @@
+import numpy
 import numpy as np
 from heuristic.genetic.vars import DTO, AR
 
@@ -19,12 +20,16 @@ class Chromosome:
                f'\nDTOs taken: {self.dtos},\nARs served: {self.ars_served}'
 
     def print(self) -> None:
+        """ Prints all info about the solution """
         print(self)
 
     def size(self) -> int:
+        """ Returns the length of dto list """
         return len(self.dtos)
 
     def add_dto(self, dto: DTO) -> bool:
+        """ Adds a DTO to the solution in start time order, updates total memory, fitness and ARs served.
+            Returns True if the insertion """
         if len(self.dtos) == 0 or dto['stop_time'] < self.dtos[0]['start_time']:
             index = 0
         elif dto['start_time'] > self.dtos[-1]['stop_time']:
@@ -77,6 +82,29 @@ class Chromosome:
             return self.dtos[-1]
         else:
             return None
+
+    def keeps_feasibility(self, dto: DTO, capacity: float) -> bool:
+        """ Returns True if the solution keeps feasibility if the DTO would be added """
+        return not np.isin(dto['ar_id'], self.get_ars_served()) \
+               and self.get_tot_memory() + dto['memory'] <= capacity \
+               and not np.any([self.overlap(dto, dto_test) for dto_test in self.dtos])
+
+    def is_feasible(self, capacity: float) -> bool:
+        """ Checks if the solution is feasible or not """
+        # memory constraint check
+        if self.get_tot_memory() > capacity:
+            return False
+
+        # overlap constraint check
+        for dto1 in self.dtos:
+            for dto2 in self.dtos:
+                if self.overlap(dto1, dto2) and dto1 != dto2:
+                    return False
+
+        # single satisfaction check
+        if len(np.unique(self.get_ars_served())) != len(self.get_ars_served()):
+            return False
+        return True
 
     @staticmethod
     def overlap(event1: DTO, event2: DTO):
