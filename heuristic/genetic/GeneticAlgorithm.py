@@ -16,17 +16,17 @@ class GeneticAlgorithm:
         print(f'Capacity: {capacity}')
         self.total_dtos: [DTO] = total_dtos
         self.num_generations: int = num_generations
-        self.elite: Chromosome = Chromosome()
+        self.elite: Chromosome = Chromosome(self.capacity)
         self.parents: [(Chromosome, Chromosome)] = []
         self.fitness_history: [float] = []
         self.population: [Chromosome] = []
 
         for i in range(num_chromosomes):
-            chromosome = Chromosome()
+            chromosome = Chromosome(self.capacity)
 
             shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
             for dto in shuffled_dtos:
-                if chromosome.size() == 0 or chromosome.keeps_feasibility(dto, self.capacity):
+                if chromosome.size() == 0 or chromosome.keeps_feasibility(dto):
                     chromosome.add_dto(dto)
 
             self.population.append(chromosome)
@@ -57,10 +57,14 @@ class GeneticAlgorithm:
 
         sons: [Chromosome] = []
         for parent1, parent2 in self.parents:
-            rand1, rand2 = sample(range(0, len(parent1.dtos)), 2)
-            i1, i2 = (rand1, rand2) if rand1 <= rand2 else (rand2, rand1)
-            son_dtos = parent1.dtos[:i1] + parent2.dtos[i1:i2] + parent1.dtos[i2:]
-            sons.append(Chromosome(son_dtos))
+            # multi point crossover
+            # rand1, rand2 = sample(range(0, len(parent1.dtos)), 2)
+            # i1, i2 = (rand1, rand2) if rand1 <= rand2 else (rand2, rand1)
+            # son_dtos = parent1.dtos[:i1] + parent2.dtos[i1:i2] + parent1.dtos[i2:]
+            index = np.random.randint(0, len(parent1.dtos))
+            son_dtos = parent1.dtos[:index] + parent2.dtos[index:]
+
+            sons.append(Chromosome(self.capacity, son_dtos))
 
         self.population = [self.elite] + sons
 
@@ -89,7 +93,7 @@ class GeneticAlgorithm:
             print(f'   ({chromosome.dtos},')
             print(f'    - Memory occupied: {chromosome.get_tot_memory()},')
             print(f'    - Total priority: {chromosome.get_tot_fitness()})')
-            print(f'    - Feasible: {chromosome.is_feasible(self.capacity)})')
+            print(f'    - Feasible: {chromosome.is_feasible()})')
 
         print(']')
         print(f'Number of chromosomes: {len(self.population)}')

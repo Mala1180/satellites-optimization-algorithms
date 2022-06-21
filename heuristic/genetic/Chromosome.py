@@ -6,7 +6,7 @@ from heuristic.genetic.vars import DTO, AR
 class Chromosome:
     """ A class that represents a possible solution of GeneticAlgorithm class """
 
-    def __init__(self, dtos: [DTO] = None) -> None:
+    def __init__(self, capacity: float, dtos: [DTO] = None) -> None:
         """ If no argument is given, creates an empty solution, otherwise a solution with given DTOs  """
         if dtos is None:
             dtos = []
@@ -14,10 +14,11 @@ class Chromosome:
         self.tot_fitness: float = sum(self.get_priorities())
         self.tot_memory: float = sum(self.get_memories())
         self.ars_served = np.array([dto_['ar_id'] for dto_ in self.dtos])
+        self.capacity: float = capacity
 
     def __str__(self) -> str:
-        return f'Fitness: {self.tot_fitness},\nMemory occupied: {self.tot_memory},' \
-               f'\nDTOs taken: {self.dtos},\nARs served: {self.ars_served}'
+        return f'Fitness: {self.tot_fitness},\nFeasible: {self.is_feasible()},\nMemory occupied: {self.tot_memory},' \
+               f'\nDTOs taken: {self.dtos[:5]}...,\nARs served: {self.ars_served[:5]}...'
 
     def print(self) -> None:
         """ Prints all info about the solution """
@@ -83,16 +84,16 @@ class Chromosome:
         else:
             return None
 
-    def keeps_feasibility(self, dto: DTO, capacity: float) -> bool:
+    def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
         return not np.isin(dto['ar_id'], self.get_ars_served()) \
-               and self.get_tot_memory() + dto['memory'] <= capacity \
+               and self.get_tot_memory() + dto['memory'] <= self.capacity \
                and not np.any([self.overlap(dto, dto_test) for dto_test in self.dtos])
 
-    def is_feasible(self, capacity: float) -> bool:
+    def is_feasible(self) -> bool:
         """ Checks if the solution is feasible or not """
         # memory constraint check
-        if self.get_tot_memory() > capacity:
+        if self.get_tot_memory() > self.capacity:
             return False
 
         # overlap constraint check
