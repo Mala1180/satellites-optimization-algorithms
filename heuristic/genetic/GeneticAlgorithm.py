@@ -61,6 +61,7 @@ class GeneticAlgorithm:
             # rand1, rand2 = sample(range(0, len(parent1.dtos)), 2)
             # i1, i2 = (rand1, rand2) if rand1 <= rand2 else (rand2, rand1)
             # son_dtos = parent1.dtos[:i1] + parent2.dtos[i1:i2] + parent1.dtos[i2:]
+
             index = np.random.randint(0, len(parent1.dtos))
             son_dtos = parent1.dtos[:index] + parent2.dtos[index:]
 
@@ -69,6 +70,7 @@ class GeneticAlgorithm:
         self.population = [self.elite] + sons
 
     def mutation(self):
+        """ Mutates each chromosome in the population """
         pass
 
     def run(self):

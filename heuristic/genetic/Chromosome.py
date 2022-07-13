@@ -47,7 +47,7 @@ class Chromosome:
         self.dtos.insert(index, dto)
         self.tot_memory += dto['memory']
         self.tot_fitness += dto['priority']
-        np.append(self.ars_served, dto['ar_id'])
+        self.ars_served = np.append(self.ars_served, dto['ar_id'])
         return True
 
     def remove_dto(self, dto: DTO) -> bool:
@@ -57,7 +57,7 @@ class Chromosome:
         self.dtos = np.delete(self.dtos, index)
         self.tot_memory -= dto['memory']
         self.tot_fitness -= dto['priority']
-        np.delete(self.ars_served, np.where(self.ars_served == dto['ar_id']))
+        self.ars_served = np.delete(self.ars_served, np.where(self.ars_served == dto['ar_id']))
         return True
 
     def get_memories(self) -> [float]:
