@@ -1,7 +1,7 @@
 import numpy as np
 
 from typing import Optional
-from heuristic.genetic.vars import DTO
+from heuristic.genetic.vars import DTO, ndarray
 from utils.Constraint import Constraint
 
 
@@ -13,9 +13,10 @@ class Chromosome:
         if dtos is None:
             dtos = []
         self.dtos: [DTO] = sorted(dtos, key=lambda dto_: dto_['start_time'])
+        self.dto_ids: ndarray = np.array([dto_['id'] for dto_ in self.dtos])
         self.tot_fitness: float = sum(self.get_priorities())
         self.tot_memory: float = sum(self.get_memories())
-        self.ars_served = np.array([dto_['ar_id'] for dto_ in self.dtos])
+        self.ars_served: ndarray = np.array([dto_['ar_id'] for dto_ in self.dtos])
         self.capacity: float = capacity
 
     def __str__(self) -> str:
@@ -41,21 +42,22 @@ class Chromosome:
             condition = [dto['start_time'] > self.dtos[i]['stop_time']
                          and dto['stop_time'] < self.dtos[i + 1]['start_time']
                          for i in range(len(self.dtos) - 1)]
-            if not np.any(condition):
+            if not np.any(condition) or np.isin(dto['id'], self.dto_ids):
                 return False
-            insert_point = np.extract(condition, self.dtos)
+            insert_point = np.extract(condition, self.dtos)[0]
             index = self.dtos.index(insert_point) + 1
 
         self.dtos.insert(index, dto)
         self.tot_memory += dto['memory']
         self.tot_fitness += dto['priority']
         self.ars_served = np.append(self.ars_served, dto['ar_id'])
+        self.dto_ids = np.insert(self.dto_ids, index, dto['id'])
         return True
 
     def remove_dto(self, dto: DTO) -> bool:
-        if len(self.dtos) == 0 or not np.isin(dto, self.dtos):
+        if len(self.dtos) == 0 or np.isin(dto['id'], self.dto_ids):
             return False
-        index = np.searchsorted(self.dtos, dto)
+        index = np.where(self.dto_ids == dto['id'])
         return self.remove_dto_at(index)
 
     def remove_dto_at(self, index: int) -> bool:
@@ -63,10 +65,11 @@ class Chromosome:
         if index < 0 or index >= len(self.dtos):
             return False
         dto = self.dtos[index]
-        self.dtos = np.delete(self.dtos, index)
+        self.dtos.pop(index)
         self.tot_memory -= dto['memory']
         self.tot_fitness -= dto['priority']
         self.ars_served = np.delete(self.ars_served, np.where(self.ars_served == dto['ar_id']))
+        self.dto_ids = np.delete(self.dto_ids, np.where(self.ars_served == dto['id']))
         return True
 
     def get_memories(self) -> [float]:
@@ -87,7 +90,7 @@ class Chromosome:
     def get_ars_served(self) -> []:
         return self.ars_served
 
-    def get_last_dto(self):
+    def get_last_dto(self) -> Optional[DTO]:
         if len(self.dtos) > 0:
             return self.dtos[-1]
         else:
@@ -104,29 +107,26 @@ class Chromosome:
         return not np.isin(dto['ar_id'], self.get_ars_served()) \
             and not np.any([self.overlap(dto, dto_test) for dto_test in self.dtos])
 
-    def is_feasible(self, constraint: Constraint = None) -> (bool, Optional[Constraint]):
+    def is_feasible(self, constraint: Constraint = None) -> bool:
         """ Checks if the solution is feasible or not.
             If constraint is given, it checks if the solution keeps the constraint,
             otherwise it checks all constraints. """
         if constraint is None:
-            # memory constraint check
             if not self.constraint_feasible(Constraint.MEMORY):
-                return False, Constraint.MEMORY
+                return False
 
-            # overlap constraint check
             if not self.constraint_feasible(Constraint.OVERLAP):
-                return False, Constraint.OVERLAP
+                return False
 
-            # single satisfaction check
             if not self.constraint_feasible(Constraint.SINGLE_SATISFACTION):
-                return False, Constraint.SINGLE_SATISFACTION
+                return False
 
-            return True, None
+            return True
         else:
             if self.constraint_feasible(constraint):
-                return True, None
+                return True
             else:
-                return False, constraint
+                return False
 
     def constraint_feasible(self, constraint: Constraint) -> bool:
         """ Returns true if the solution respects the given constraint, false otherwise """
@@ -144,8 +144,9 @@ class Chromosome:
 
     def repair_memory(self):
         while not self.is_feasible(Constraint.MEMORY):
-            dto_to_remove = min(self.dtos, key=lambda dto: dto.priority)
-            self.remove_dto(dto_to_remove)
+            dto = min(self.dtos, key=lambda dto_: dto_['priority'])
+            index = np.where(self.dto_ids == dto['id'])[0][0]
+            self.remove_dto_at(index)
 
     @staticmethod
     def overlap(event1: DTO, event2: DTO):

@@ -76,7 +76,7 @@ class GeneticAlgorithm:
             for _ in range(len(chromosome.dtos) // 10):
                 new_dto = np.random.choice(self.total_dtos)
                 if chromosome.keeps_feasibility(new_dto):
-                    chromosome.remove_dto(np.random.randint(0, len(chromosome.dtos)))
+                    chromosome.remove_dto_at(np.random.randint(0, len(chromosome.dtos)))
                     chromosome.add_dto(new_dto)
 
     def run(self):
@@ -105,10 +105,10 @@ class GeneticAlgorithm:
         for chromosome in self.population:
             print(f'   ({chromosome.dtos},')
             print(f'    - Memory occupied: {chromosome.get_tot_memory()},')
-            print(f'    - Total priority: {chromosome.get_tot_fitness()})')
+            print(f'    - Total priority: {chromosome.get_tot_fitness()}')
             print(f'    - Feasibility: [MEMORY: {chromosome.is_feasible(Constraint.MEMORY)},'
-                  f'                    OVERLAP: {chromosome.is_feasible(Constraint.OVERLAP)}'
-                  f'                    SINGLE_SATISFACTION: {chromosome.is_feasible(Constraint.SINGLE_SATISFACTION)}]')
+                  f' OVERLAP: {chromosome.is_feasible(Constraint.OVERLAP)},'
+                  f' SINGLE_SATISFACTION: {chromosome.is_feasible(Constraint.SINGLE_SATISFACTION)})]')
 
         print(']')
         print(f'Number of chromosomes: {len(self.population)}')
