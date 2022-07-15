@@ -1,6 +1,8 @@
-import numpy
 import numpy as np
-from heuristic.genetic.vars import DTO, AR
+
+from typing import Optional
+from heuristic.genetic.vars import DTO
+from utils.Constraint import Constraint
 
 
 class Chromosome:
@@ -54,6 +56,13 @@ class Chromosome:
         if len(self.dtos) == 0 or not np.isin(dto, self.dtos):
             return False
         index = np.searchsorted(self.dtos, dto)
+        return self.remove_dto_at(index)
+
+    def remove_dto_at(self, index: int) -> bool:
+        """ Removes the DTO at the given index """
+        if index < 0 or index >= len(self.dtos):
+            return False
+        dto = self.dtos[index]
         self.dtos = np.delete(self.dtos, index)
         self.tot_memory -= dto['memory']
         self.tot_fitness -= dto['priority']
@@ -87,25 +96,56 @@ class Chromosome:
     def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
         return not np.isin(dto['ar_id'], self.get_ars_served()) \
-               and self.get_tot_memory() + dto['memory'] <= self.capacity \
-               and not np.any([self.overlap(dto, dto_test) for dto_test in self.dtos])
+            and self.get_tot_memory() + dto['memory'] <= self.capacity \
+            and not np.any([self.overlap(dto, dto_test) for dto_test in self.dtos])
 
-    def is_feasible(self) -> bool:
-        """ Checks if the solution is feasible or not """
-        # memory constraint check
-        if self.get_tot_memory() > self.capacity:
-            return False
+    def keeps_feasibility_except_memory(self, dto: DTO) -> bool:
+        """ Returns True if the solution would respect all constraints except memory if the DTO would be added """
+        return not np.isin(dto['ar_id'], self.get_ars_served()) \
+            and not np.any([self.overlap(dto, dto_test) for dto_test in self.dtos])
 
-        # overlap constraint check
-        for dto1 in self.dtos:
-            for dto2 in self.dtos:
-                if self.overlap(dto1, dto2) and dto1 != dto2:
-                    return False
+    def is_feasible(self, constraint: Constraint = None) -> (bool, Optional[Constraint]):
+        """ Checks if the solution is feasible or not.
+            If constraint is given, it checks if the solution keeps the constraint,
+            otherwise it checks all constraints. """
+        if constraint is None:
+            # memory constraint check
+            if not self.constraint_feasible(Constraint.MEMORY):
+                return False, Constraint.MEMORY
 
-        # single satisfaction check
-        if len(np.unique(self.get_ars_served())) != len(self.get_ars_served()):
-            return False
-        return True
+            # overlap constraint check
+            if not self.constraint_feasible(Constraint.OVERLAP):
+                return False, Constraint.OVERLAP
+
+            # single satisfaction check
+            if not self.constraint_feasible(Constraint.SINGLE_SATISFACTION):
+                return False, Constraint.SINGLE_SATISFACTION
+
+            return True, None
+        else:
+            if self.constraint_feasible(constraint):
+                return True, None
+            else:
+                return False, constraint
+
+    def constraint_feasible(self, constraint: Constraint) -> bool:
+        """ Returns true if the solution respects the given constraint, false otherwise """
+        match constraint:
+            case Constraint.MEMORY:
+                return self.get_tot_memory() < self.capacity
+            case Constraint.OVERLAP:
+                for dto1 in self.dtos:
+                    for dto2 in self.dtos:
+                        if self.overlap(dto1, dto2) and dto1 != dto2:
+                            return False
+                return True
+            case Constraint.SINGLE_SATISFACTION:
+                return len(np.unique(self.get_ars_served())) == len(self.get_ars_served())
+
+    def repair_memory(self):
+        while not self.is_feasible(Constraint.MEMORY):
+            dto_to_remove = min(self.dtos, key=lambda dto: dto.priority)
+            self.remove_dto(dto_to_remove)
 
     @staticmethod
     def overlap(event1: DTO, event2: DTO):

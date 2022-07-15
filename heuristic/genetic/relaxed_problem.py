@@ -36,3 +36,9 @@ ga.plot_fitness_values()
 solution = ga.get_best_solution()
 
 print(f'Best solution: {solution}')
+
+# if solution.is_feasible():
+#     prova_dto = max(dtos, key=lambda dto_: dto_["start_time"])
+#     print('Last dto taken:', solution.get_last_dto()['start_time'])
+#     print('Prova dto :', prova_dto['start_time'])
+#     print(f'KEEPS {solution.keeps_feasibility(prova_dto)}')

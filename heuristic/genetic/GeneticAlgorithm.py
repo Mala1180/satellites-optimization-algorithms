@@ -5,12 +5,13 @@ import numpy as np
 
 from heuristic.genetic.Chromosome import Chromosome
 from heuristic.genetic.vars import DTO
+from utils.Constraint import Constraint
 
 
 class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
-    def __init__(self, capacity, total_dtos, num_generations=10, num_chromosomes=5) -> None:
+    def __init__(self, capacity, total_dtos, num_generations=150, num_chromosomes=20):
         """ Creates a random initial population and prepares data for the algorithm """
         self.capacity = capacity
         print(f'Capacity: {capacity}')
@@ -70,8 +71,13 @@ class GeneticAlgorithm:
         self.population = [self.elite] + sons
 
     def mutation(self):
-        """ Mutates each chromosome in the population """
-        pass
+        """ Mutates randomly the 10% of each chromosome in the population """
+        for chromosome in self.population:
+            for _ in range(len(chromosome.dtos) // 10):
+                new_dto = np.random.choice(self.total_dtos)
+                if chromosome.keeps_feasibility(new_dto):
+                    chromosome.remove_dto(np.random.randint(0, len(chromosome.dtos)))
+                    chromosome.add_dto(new_dto)
 
     def run(self):
         """ Starts the algorithm itself """
@@ -83,6 +89,11 @@ class GeneticAlgorithm:
             self.elitism()
             self.parent_selection()
             self.crossover()
+            self.mutation()
+
+        for chromosome in self.population:
+            if not chromosome.is_feasible(Constraint.MEMORY):
+                chromosome.repair_memory()
 
     def get_best_solution(self) -> Chromosome:
         """ Returns the best solution in the population after running of the algorithm """
@@ -95,7 +106,9 @@ class GeneticAlgorithm:
             print(f'   ({chromosome.dtos},')
             print(f'    - Memory occupied: {chromosome.get_tot_memory()},')
             print(f'    - Total priority: {chromosome.get_tot_fitness()})')
-            print(f'    - Feasible: {chromosome.is_feasible()})')
+            print(f'    - Feasibility: [MEMORY: {chromosome.is_feasible(Constraint.MEMORY)},'
+                  f'                    OVERLAP: {chromosome.is_feasible(Constraint.OVERLAP)}'
+                  f'                    SINGLE_SATISFACTION: {chromosome.is_feasible(Constraint.SINGLE_SATISFACTION)}]')
 
         print(']')
         print(f'Number of chromosomes: {len(self.population)}')
