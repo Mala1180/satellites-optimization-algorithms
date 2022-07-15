@@ -57,7 +57,7 @@ class Chromosome:
     def remove_dto(self, dto: DTO) -> bool:
         if len(self.dtos) == 0 or np.isin(dto['id'], self.dto_ids):
             return False
-        index = np.where(self.dto_ids == dto['id'])
+        index = np.where(self.dto_ids == dto['id'])[0][0]
         return self.remove_dto_at(index)
 
     def remove_dto_at(self, index: int) -> bool:
