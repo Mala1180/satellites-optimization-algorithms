@@ -4,7 +4,7 @@ import json
 import gurobipy as gp
 from gurobipy import GRB
 import time
-from utils.overlap import overlap
+from utils.functions import overlap
 
 # read JSON files
 dtos_file = open('../data/day1_0/DTOs.json')

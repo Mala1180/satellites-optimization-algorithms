@@ -3,6 +3,7 @@ import numpy as np
 from typing import Optional
 from heuristic.genetic.vars import DTO, ndarray
 from utils.Constraint import Constraint
+from utils.functions import overlap, binary_search, find_insertion_point
 
 
 class Chromosome:
@@ -39,13 +40,7 @@ class Chromosome:
         elif dto['start_time'] > self.dtos[-1]['stop_time']:
             index = len(self.dtos)
         else:
-            condition = [dto['start_time'] > self.dtos[i]['stop_time']
-                         and dto['stop_time'] < self.dtos[i + 1]['start_time']
-                         for i in range(len(self.dtos) - 1)]
-            if not np.any(condition) or np.isin(dto['id'], self.dto_ids):
-                return False
-            insert_point = np.extract(condition, self.dtos)[0]
-            index = self.dtos.index(insert_point) + 1
+            index = find_insertion_point(dto, self.dtos, 0, len(self.dtos) - 1)
 
         self.dtos.insert(index, dto)
         self.tot_memory += dto['memory']
@@ -55,9 +50,9 @@ class Chromosome:
         return True
 
     def remove_dto(self, dto: DTO) -> bool:
-        if len(self.dtos) == 0 or np.isin(dto['id'], self.dto_ids):
+        index = binary_search(dto, self.dtos, 0, len(self.dtos) - 1)
+        if index == -1:
             return False
-        index = np.where(self.dto_ids == dto['id'])[0][0]
         return self.remove_dto_at(index)
 
     def remove_dto_at(self, index: int) -> bool:
@@ -100,12 +95,12 @@ class Chromosome:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
         return not np.isin(dto['ar_id'], self.get_ars_served()) \
             and self.get_tot_memory() + dto['memory'] <= self.capacity \
-            and not np.any([self.overlap(dto, dto_test) for dto_test in self.dtos])
+            and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
 
     def keeps_feasibility_except_memory(self, dto: DTO) -> bool:
         """ Returns True if the solution would respect all constraints except memory if the DTO would be added """
         return not np.isin(dto['ar_id'], self.get_ars_served()) \
-            and not np.any([self.overlap(dto, dto_test) for dto_test in self.dtos])
+            and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
 
     def is_feasible(self, constraint: Constraint = None) -> bool:
         """ Checks if the solution is feasible or not.
@@ -130,25 +125,18 @@ class Chromosome:
 
     def constraint_feasible(self, constraint: Constraint) -> bool:
         """ Returns true if the solution respects the given constraint, false otherwise """
-        match constraint:
-            case Constraint.MEMORY:
-                return self.get_tot_memory() < self.capacity
-            case Constraint.OVERLAP:
-                for dto1 in self.dtos:
-                    for dto2 in self.dtos:
-                        if self.overlap(dto1, dto2) and dto1 != dto2:
-                            return False
-                return True
-            case Constraint.SINGLE_SATISFACTION:
-                return len(np.unique(self.get_ars_served())) == len(self.get_ars_served())
+        if constraint == Constraint.MEMORY:
+            return self.get_tot_memory() < self.capacity
+        elif constraint == Constraint.OVERLAP:
+            for index in range(len(self.dtos) - 1):
+                if overlap(self.dtos[index], self.dtos[index + 1]):
+                    return False
+            return True
+        elif constraint == Constraint.SINGLE_SATISFACTION:
+            return len(np.unique(self.get_ars_served())) == len(self.get_ars_served())
 
     def repair_memory(self):
         while not self.is_feasible(Constraint.MEMORY):
             dto = min(self.dtos, key=lambda dto_: dto_['priority'])
             index = np.where(self.dto_ids == dto['id'])[0][0]
             self.remove_dto_at(index)
-
-    @staticmethod
-    def overlap(event1: DTO, event2: DTO):
-        """ Returns True if events overlap, False otherwise """
-        return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time']

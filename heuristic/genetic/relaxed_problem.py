@@ -42,3 +42,5 @@ print(f'Best solution: {solution}')
 #     print('Last dto taken:', solution.get_last_dto()['start_time'])
 #     print('Prova dto :', prova_dto['start_time'])
 #     print(f'KEEPS {solution.keeps_feasibility(prova_dto)}')
+
+print(f'UGUALI? \n {sorted(solution.dtos, key=lambda dto: dto["start_time"]) == solution.dtos}')
