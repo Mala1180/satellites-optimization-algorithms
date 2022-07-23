@@ -23,12 +23,16 @@ priorities = []
 CAPACITY: float = constants['MEMORY_CAP']
 DTOS_NUMBER: int = len(dtos)
 
-# populate array of priorities
-for index_dto, dto in enumerate(dtos):
-    priorities.append(next((ar['rank'] for ar in ars if ar['id'] == dto['ar_id']), None))
-    dto['priority'] = priorities[index_dto]
+for i, ar in enumerate(ars):
+    ar['index'] = i
 
-ga = GeneticAlgorithm(CAPACITY, dtos)
+# populate array of priorities
+for i, dto in enumerate(dtos):
+    priorities.append(next((ar['rank'] for ar in ars if ar['id'] == dto['ar_id']), None))
+    dto['priority'] = priorities[i]
+    dto['ar_index'] = next((ar['index'] for ar in ars if ar['id'] == dto['ar_id']), None)
+
+ga = GeneticAlgorithm(CAPACITY, dtos, ars)
 ga.run()
 ga.print_population()
 ga.plot_fitness_values()
@@ -42,5 +46,3 @@ print(f'Best solution: {solution}')
 #     print('Last dto taken:', solution.get_last_dto()['start_time'])
 #     print('Prova dto :', prova_dto['start_time'])
 #     print(f'KEEPS {solution.keeps_feasibility(prova_dto)}')
-
-print(f'UGUALI? \n {sorted(solution.dtos, key=lambda dto: dto["start_time"]) == solution.dtos}')

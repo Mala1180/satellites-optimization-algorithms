@@ -1,7 +1,7 @@
 import numpy as np
 
 from typing import Optional
-from heuristic.genetic.vars import DTO, ndarray
+from heuristic.genetic.vars import DTO, AR, ndarray
 from utils.Constraint import Constraint
 from utils.functions import overlap, binary_search, find_insertion_point
 
@@ -9,15 +9,25 @@ from utils.functions import overlap, binary_search, find_insertion_point
 class Chromosome:
     """ A class that represents a possible solution of GeneticAlgorithm class """
 
-    def __init__(self, capacity: float, dtos: [DTO] = None) -> None:
-        """ If no argument is given, creates an empty solution, otherwise a solution with given DTOs  """
+    def __init__(self, capacity: float, ars: [AR], dtos: [DTO] = None) -> None:
+        """ If no argument is given, creates an empty solution, otherwise creates a solution with given DTOs """
         if dtos is None:
             dtos = []
+        # Loads DTOs
         self.dtos: [DTO] = sorted(dtos, key=lambda dto_: dto_['start_time'])
-        self.dto_ids: ndarray = np.array([dto_['id'] for dto_ in self.dtos])
+        # self.dto_ids: ndarray = np.array([dto['id'] for dto in self.dtos])
+        # Loads ARs
+        self.ars: [AR] = ars
+        self.ar_ids: [int] = list(map(lambda ar: ar['id'], self.ars))
+
+        if len(self.dtos) == 0:
+            self.ars_served: ndarray = np.full(len(ars), False)
+        else:
+            self.ars_served: ndarray = np.isin(self.ar_ids, [dto['ar_id'] for dto in self.dtos])
+
         self.tot_fitness: float = sum(self.get_priorities())
         self.tot_memory: float = sum(self.get_memories())
-        self.ars_served: ndarray = np.array([dto_['ar_id'] for dto_ in self.dtos])
+
         self.capacity: float = capacity
 
     def __str__(self) -> str:
@@ -35,6 +45,8 @@ class Chromosome:
     def add_dto(self, dto: DTO) -> bool:
         """ Adds a DTO to the solution in start time order, updates total memory, fitness and ARs served.
             Returns True if the insertion """
+        if np.any(self.dtos == dto):
+            return False
         if len(self.dtos) == 0 or dto['stop_time'] < self.dtos[0]['start_time']:
             index = 0
         elif dto['start_time'] > self.dtos[-1]['stop_time']:
@@ -45,11 +57,12 @@ class Chromosome:
         self.dtos.insert(index, dto)
         self.tot_memory += dto['memory']
         self.tot_fitness += dto['priority']
-        self.ars_served = np.append(self.ars_served, dto['ar_id'])
-        self.dto_ids = np.insert(self.dto_ids, index, dto['id'])
+        self.ars_served[dto['ar_index']] = True
+        # self.dto_ids = np.insert(self.dto_ids, index, dto['id'])
         return True
 
     def remove_dto(self, dto: DTO) -> bool:
+        """ Removes a DTO from the solution """
         index = binary_search(dto, self.dtos, 0, len(self.dtos) - 1)
         if index == -1:
             return False
@@ -63,8 +76,8 @@ class Chromosome:
         self.dtos.pop(index)
         self.tot_memory -= dto['memory']
         self.tot_fitness -= dto['priority']
-        self.ars_served = np.delete(self.ars_served, np.where(self.ars_served == dto['ar_id']))
-        self.dto_ids = np.delete(self.dto_ids, np.where(self.ars_served == dto['id']))
+        self.ars_served[dto['ar_index']] = False
+        # self.dto_ids = np.delete(self.dto_ids, np.where(self.dto_ids == dto['id']))
         return True
 
     def get_memories(self) -> [float]:
@@ -82,8 +95,8 @@ class Chromosome:
     def get_max_priority(self) -> float:
         return float(np.max(np.array(self.get_priorities())))
 
-    def get_ars_served(self) -> []:
-        return self.ars_served
+    def get_ars_served(self) -> [int]:
+        return list(map(lambda dto: dto['ar_id'], self.dtos))
 
     def get_last_dto(self) -> Optional[DTO]:
         if len(self.dtos) > 0:
@@ -93,13 +106,13 @@ class Chromosome:
 
     def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
-        return not np.isin(dto['ar_id'], self.get_ars_served()) \
+        return not self.ars_served[dto['ar_index']] \
             and self.get_tot_memory() + dto['memory'] <= self.capacity \
             and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
 
     def keeps_feasibility_except_memory(self, dto: DTO) -> bool:
         """ Returns True if the solution would respect all constraints except memory if the DTO would be added """
-        return not np.isin(dto['ar_id'], self.get_ars_served()) \
+        return not self.ars_served[dto['ar_index']] \
             and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
 
     def is_feasible(self, constraint: Constraint = None) -> bool:
@@ -137,6 +150,28 @@ class Chromosome:
 
     def repair_memory(self):
         while not self.is_feasible(Constraint.MEMORY):
-            dto = min(self.dtos, key=lambda dto_: dto_['priority'])
-            index = np.where(self.dto_ids == dto['id'])[0][0]
+            index = np.random.randint(len(self.dtos))
+            self.remove_dto_at(index)
+
+    def repair_overlap(self):
+        while not self.is_feasible(Constraint.OVERLAP):
+            i: int = 0
+            while i < len(self.dtos) - 1:
+                if i == len(self.dtos) - 1:
+                    print("oi")
+                if overlap(self.dtos[i], self.dtos[i + 1]):
+                    self.remove_dto_at(np.random.randint(i, i + 2))
+                    i -= 1
+                i += 1
+
+    def repair_satisfaction(self):
+        while not self.is_feasible(Constraint.SINGLE_SATISFACTION):
+            # ar_ids_served = np.array([dto['ar_id'] for dto in self.dtos])
+            # values, counters = np.unique(ar_ids_served, return_counts=True)
+            # dup = values[counters > 1]
+            # for ar_id in dup:
+            #     index = np.argwhere(ar_ids_served == ar_id)[0][0]
+            #     self.remove_dto_at(index)
+
+            index = np.random.randint(len(self.dtos))
             self.remove_dto_at(index)
