@@ -105,14 +105,19 @@ class Chromosome:
 
     def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
-        return not self.ars_served[dto['ar_index']] \
-            and self.get_tot_memory() + dto['memory'] <= self.capacity \
-            and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
+        if self.ars_served[dto['ar_index']] \
+                or self.get_tot_memory() + dto['memory'] > self.capacity:
+            return False
+        else:
+            for dto_ in self.dtos:
+                if overlap(dto, dto_):
+                    return False
+        return True
 
     def keeps_feasibility_except_memory(self, dto: DTO) -> bool:
         """ Returns True if the solution would respect all constraints except memory if the DTO would be added """
         return not self.ars_served[dto['ar_index']] \
-            and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
+               and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
 
     def is_feasible(self, constraint: Constraint = None) -> bool:
         """ Checks if the solution is feasible or not.
