@@ -157,8 +157,6 @@ class Chromosome:
         while not self.is_feasible(Constraint.OVERLAP):
             i: int = 0
             while i < len(self.dtos) - 1:
-                if i == len(self.dtos) - 1:
-                    print("oi")
                 if overlap(self.dtos[i], self.dtos[i + 1]):
                     self.remove_dto_at(np.random.randint(i, i + 2))
                     i -= 1

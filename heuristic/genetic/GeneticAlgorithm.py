@@ -76,9 +76,12 @@ class GeneticAlgorithm:
     def mutation(self):
         """ Mutates randomly the 10% of each chromosome in the population """
         for chromosome in self.population:
+            # Inserts 10 random DTOs in the plan
             for _ in range(10):
                 new_dto = choice(self.total_dtos)
                 chromosome.add_dto(new_dto)
+
+            # Replaces 10% of DTOs in the plan with new random DTOs
             # for _ in range(len(chromosome.dtos) // 10):
             #     new_dto = choice(self.total_dtos)
             #
