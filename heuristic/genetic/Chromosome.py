@@ -25,14 +25,10 @@ class Chromosome:
         else:
             self.ars_served: ndarray = np.isin(self.ar_ids, [dto['ar_id'] for dto in self.dtos])
 
-        self.tot_fitness: float = sum(self.get_priorities())
+        self.fitness: float = sum(self.get_priorities())
         self.tot_memory: float = sum(self.get_memories())
 
         self.capacity: float = capacity
-
-    def __str__(self) -> str:
-        return f'Fitness: {self.tot_fitness},\nFeasible: {self.is_feasible()},\nMemory occupied: {self.tot_memory},' \
-               f'\nDTOs taken: {self.dtos[:5]}...,\nARs served: {self.ars_served[:5]}...'
 
     def print(self) -> None:
         """ Prints all info about the solution """
@@ -56,7 +52,7 @@ class Chromosome:
 
         self.dtos.insert(index, dto)
         self.tot_memory += dto['memory']
-        self.tot_fitness += dto['priority']
+        self.fitness += dto['priority']
         self.ars_served[dto['ar_index']] = True
         # self.dto_ids = np.insert(self.dto_ids, index, dto['id'])
         return True
@@ -75,30 +71,33 @@ class Chromosome:
         dto = self.dtos[index]
         self.dtos.pop(index)
         self.tot_memory -= dto['memory']
-        self.tot_fitness -= dto['priority']
+        self.fitness -= dto['priority']
         self.ars_served[dto['ar_index']] = False
         # self.dto_ids = np.delete(self.dto_ids, np.where(self.dto_ids == dto['id']))
         return True
 
     def get_memories(self) -> [float]:
+        """ Returns the memory cost of each DTO in the solution """
         return list(map(lambda dto_: dto_['memory'], self.dtos))
 
     def get_priorities(self) -> [float]:
+        """ Returns the priorities of the DTOs in the solution """
         return list(map(lambda dto_: dto_['priority'], self.dtos))
 
     def get_tot_memory(self) -> float:
+        """ Returns the total memory occupied of the solution """
         return self.tot_memory
 
     def get_tot_fitness(self) -> float:
-        return self.tot_fitness
-
-    def get_max_priority(self) -> float:
-        return float(np.max(np.array(self.get_priorities())))
+        """ Returns the fitness of the solution """
+        return self.fitness
 
     def get_ars_served(self) -> [int]:
+        """ Returns the ARs ids satisfied by the solution """
         return list(map(lambda dto: dto['ar_id'], self.dtos))
 
     def get_last_dto(self) -> Optional[DTO]:
+        """ Returns the last DTO in the solution """
         if len(self.dtos) > 0:
             return self.dtos[-1]
         else:
@@ -149,11 +148,13 @@ class Chromosome:
             return len(np.unique(self.get_ars_served())) == len(self.get_ars_served())
 
     def repair_memory(self):
+        """ Repairs the memory constraint of the solution """
         while not self.is_feasible(Constraint.MEMORY):
             index = np.random.randint(len(self.dtos))
             self.remove_dto_at(index)
 
     def repair_overlap(self):
+        """ Repairs the overlap constraint of the solution """
         while not self.is_feasible(Constraint.OVERLAP):
             i: int = 0
             while i < len(self.dtos) - 1:
@@ -163,6 +164,7 @@ class Chromosome:
                 i += 1
 
     def repair_satisfaction(self):
+        """ Repairs the single satisfaction constraint of the solution """
         while not self.is_feasible(Constraint.SINGLE_SATISFACTION):
             # ar_ids_served = np.array([dto['ar_id'] for dto in self.dtos])
             # values, counters = np.unique(ar_ids_served, return_counts=True)
@@ -173,3 +175,7 @@ class Chromosome:
 
             index = np.random.randint(len(self.dtos))
             self.remove_dto_at(index)
+
+    def __str__(self) -> str:
+        return f'Fitness: {self.fitness},\nFeasible: {self.is_feasible()},\nMemory occupied: {self.tot_memory},' \
+               f'\nDTOs taken: {self.dtos[:5]}...,\nARs served: {self.ars_served[:5]}...'

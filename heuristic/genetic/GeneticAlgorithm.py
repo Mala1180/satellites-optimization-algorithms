@@ -57,7 +57,6 @@ class GeneticAlgorithm:
     def crossover(self):
         """ Makes crossover between each couple of parents, and replaces the entire population except
             elites with the new offspring """
-
         sons: [Chromosome] = []
         for parent1, parent2 in self.parents:
             # multi point crossover
@@ -70,7 +69,6 @@ class GeneticAlgorithm:
 
             sons.append(Chromosome(self.capacity, self.total_ars, son_dtos))
 
-        print(f"CROSSOVER, len elites: {len(self.elites)}, len sons: {len(sons)}")
         self.population = self.elites + sons
 
     def mutation(self):
@@ -99,6 +97,9 @@ class GeneticAlgorithm:
             if not chromosome.is_feasible(Constraint.MEMORY):
                 chromosome.repair_memory()
 
+    def local_search(self):
+        pass
+
     def run(self):
         """ Starts the algorithm itself """
         for i in range(self.num_generations):
@@ -108,6 +109,7 @@ class GeneticAlgorithm:
             self.crossover()
             self.mutation()
             self.repair()
+            self.local_search()
             chromosome_fitness = [chromosome.get_tot_fitness() for chromosome in self.population]
             self.fitness_history.append(chromosome_fitness)
             print(f'Fitness: {self.fitness_history[i]}')
@@ -137,3 +139,5 @@ class GeneticAlgorithm:
             plt.plot(np.arange(0, self.num_generations), history[:, i])
         plt.title('Fitness values - Generations')
         plt.show()
+
+
