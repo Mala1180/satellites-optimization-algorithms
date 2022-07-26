@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from gurobipy import GRB
 
-from utils.functions import overlap, load_instance
+from utils import overlap, load_instance
 
 INSTANCE = 'day1_40'
 dtos, ars, constants, paws, dlos = load_instance('day1_40')

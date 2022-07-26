@@ -4,7 +4,7 @@ import numpy as np
 
 from .my_types import DTO, AR, ndarray
 from utils import Constraint
-from utils.functions import overlap, binary_search, find_insertion_point
+from utils import overlap, binary_search, find_insertion_point
 
 
 class Chromosome:

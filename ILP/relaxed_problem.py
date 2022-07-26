@@ -4,7 +4,7 @@ import gurobipy as gp
 import numpy as np
 from gurobipy import GRB
 
-from utils.functions import overlap, load_instance
+from utils import overlap, load_instance
 
 dtos, ars, constants, paws = load_instance('day1_0')[:4]
 
