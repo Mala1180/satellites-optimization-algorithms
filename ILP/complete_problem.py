@@ -197,10 +197,10 @@ if model.Status == GRB.OPTIMAL:
     plt.title('Memory')
     plt.show()
 
-    with open(f'../data/{INSTANCE}/result.json', 'w') as f:
+    with open(f'../instances/{INSTANCE}/result.json', 'w') as f:
         json.dump(json_solution, f)
 
-    # with open(f'../data/{INSTANCE}/result.json') as f:
+    # with open(f'../instances/{INSTANCE}/result.json') as f:
     #     old_json = json.loads(f.read())
     #     print(old_json['Vars'])
     #     print(json_solution['Vars'])
