@@ -1,22 +1,21 @@
-import json
+from utils.functions import load_instance, overlap
 
 from heuristic.genetic.GeneticAlgorithm import GeneticAlgorithm
 
-INSTANCE = 'day1_0'
+dtos, ars, constants, paws = load_instance('day1_0')[:4]
 
-# read JSON files
+# get rid of dtos overlapping with paws and dlos
+filtered_dtos = []
+for dto in dtos:
+    skip = False
+    for event in paws:
+        if overlap(dto, event):
+            skip = True
+            break
+    if not skip:
+        filtered_dtos.append(dto)
 
-dtos_file = open(f'../../data/{INSTANCE}/DTOs.json')
-ars_file = open(f'../../data/{INSTANCE}/ARs.json')
-constants_file = open(f'../../data/{INSTANCE}/constants.json')
-paws_file = open(f'../../data/{INSTANCE}/PAWs.json')
-
-# loads JSON, the result is a dictionary
-dtos = json.loads(dtos_file.read())
-ars = json.loads(ars_file.read())
-constants = json.loads(constants_file.read())
-paws = json.loads(paws_file.read())
-
+dtos = filtered_dtos
 memories = list(map(lambda dto_: dto_['memory'], dtos))
 priorities = []
 
@@ -40,9 +39,3 @@ ga.plot_fitness_values()
 solution = ga.get_best_solution()
 
 print(f'Best solution: {solution}')
-
-# if solution.is_feasible():
-#     prova_dto = max(dtos, key=lambda dto_: dto_["start_time"])
-#     print('Last dto taken:', solution.get_last_dto()['start_time'])
-#     print('Prova dto :', prova_dto['start_time'])
-#     print(f'KEEPS {solution.keeps_feasibility(prova_dto)}')

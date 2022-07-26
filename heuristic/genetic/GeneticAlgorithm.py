@@ -8,7 +8,7 @@ from heuristic.genetic.crossover.MultiPointCrossover import MultiPointCrossover
 from heuristic.genetic.crossover.SinglePointCrossover import SinglePointCrossover
 from heuristic.genetic.parent_selection.RouletteWheelSelection import RouletteWheelSelection
 
-from heuristic.genetic.vars import DTO
+from heuristic.genetic.types import DTO
 from utils.Constraint import Constraint
 
 
@@ -75,6 +75,7 @@ class GeneticAlgorithm:
             # Inserts 10 random DTOs in the plan
             # for _ in range(10):
             #     new_dto = choice(self.total_dtos)
+            #     # chromosome.remove_dto_at(np.random.randint(0, len(chromosome.dtos)))
             #     chromosome.add_dto(new_dto)
 
             # Replaces 10% of DTOs in the plan with new random DTOs

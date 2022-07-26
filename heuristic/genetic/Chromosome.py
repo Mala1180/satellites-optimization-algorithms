@@ -1,7 +1,7 @@
 import numpy as np
 
 from typing import Optional
-from heuristic.genetic.vars import DTO, AR, ndarray
+from heuristic.genetic.types import DTO, AR, ndarray
 from utils.Constraint import Constraint
 from utils.functions import overlap, binary_search, find_insertion_point
 

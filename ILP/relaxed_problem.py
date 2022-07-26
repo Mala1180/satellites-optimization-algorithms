@@ -1,22 +1,11 @@
 import sys
 import numpy as np
-import json
 import gurobipy as gp
 from gurobipy import GRB
 import time
-from utils.functions import overlap
+from utils.functions import overlap, load_instance
 
-# read JSON files
-dtos_file = open('../data/day1_0/DTOs.json')
-ars_file = open('../data/day1_0/ARs.json')
-constants_file = open('../data/day1_0/constants.json')
-paws_file = open('../data/day1_0/PAWs.json')
-
-# loads JSON, the result is a dictionary
-dtos = json.loads(dtos_file.read())
-ars = json.loads(ars_file.read())
-constants = json.loads(constants_file.read())
-paws = json.loads(paws_file.read())
+dtos, ars, constants, paws = load_instance('day1_0')[:4]
 
 # get rid of dtos overlapping with paws and dlos
 filtered_dtos = []

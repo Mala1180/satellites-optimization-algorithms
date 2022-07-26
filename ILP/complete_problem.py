@@ -4,25 +4,11 @@ import json
 import gurobipy as gp
 from gurobipy import GRB
 import time
-from utils.functions import overlap
+from utils.functions import overlap, load_instance
 import matplotlib.pyplot as plt
 
-INSTANCE = 'day1_40'
+dtos, ars, constants, paws, dlos = load_instance('day1_40')
 
-# read JSON files
-
-dtos_file = open(f'../data/{INSTANCE}/DTOs.json')
-ars_file = open(f'../data/{INSTANCE}/ARs.json')
-constants_file = open(f'../data/{INSTANCE}/constants.json')
-paws_file = open(f'../data/{INSTANCE}/PAWs.json')
-dlos_file = open(f'../data/{INSTANCE}/DLOs.json')
-
-# loads JSON, the result is a dictionary
-dtos = json.loads(dtos_file.read())
-ars = json.loads(ars_file.read())
-constants = json.loads(constants_file.read())
-paws = json.loads(paws_file.read())
-dlos = json.loads(dlos_file.read())
 initial_dlos = dlos
 
 # get rid of dtos overlapping with paws and dlos
