@@ -1,6 +1,7 @@
 from typing import Optional
 
 import numpy as np
+from matplotlib import pyplot as plt
 
 from .my_types import DTO, AR, ndarray
 from utils import Constraint
@@ -118,7 +119,7 @@ class Chromosome:
     def keeps_feasibility_except_memory(self, dto: DTO) -> bool:
         """ Returns True if the solution would respect all constraints except memory if the DTO would be added """
         return not self.ars_served[dto['ar_index']] \
-               and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
+            and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
 
     def is_feasible(self, constraint: Constraint = None) -> bool:
         """ Checks if the solution is feasible or not.
@@ -146,7 +147,7 @@ class Chromosome:
         if constraint == Constraint.MEMORY:
             return self.get_tot_memory() < self.capacity
         elif constraint == Constraint.OVERLAP:
-            for index in range(len(self.dtos) - 1):
+            for index in range(self.size() - 1):
                 if overlap(self.dtos[index], self.dtos[index + 1]):
                     return False
             return True
@@ -156,14 +157,14 @@ class Chromosome:
     def repair_memory(self):
         """ Repairs the memory constraint of the solution """
         while not self.is_feasible(Constraint.MEMORY):
-            index = np.random.randint(len(self.dtos))
+            index = np.random.randint(self.size())
             self.remove_dto_at(index)
 
     def repair_overlap(self):
         """ Repairs the overlap constraint of the solution """
         while not self.is_feasible(Constraint.OVERLAP):
             i: int = 0
-            while i < len(self.dtos) - 1:
+            while i < self.size() - 1:
                 if overlap(self.dtos[i], self.dtos[i + 1]):
                     self.remove_dto_at(np.random.randint(i, i + 2))
                     i -= 1
@@ -179,8 +180,20 @@ class Chromosome:
             #     index = np.argwhere(ar_ids_served == ar_id)[0][0]
             #     self.remove_dto_at(index)
 
-            index = np.random.randint(len(self.dtos))
+            index = np.random.randint(self.size())
             self.remove_dto_at(index)
+
+    def plot_memory(self):
+        """ Plots the memory of the solution """
+        memories = []
+        incremental_memory: float = 0
+        for memory in self.get_memories():
+            incremental_memory += memory
+            memories.append(incremental_memory)
+        xx = np.arange(self.size())
+        plt.plot(xx, memories, 'r-')
+        plt.title('Memory')
+        plt.show()
 
     def __str__(self) -> str:
         return f'Fitness: {self.fitness},\nFeasible: {self.is_feasible()},\nMemory occupied: {self.tot_memory},' \

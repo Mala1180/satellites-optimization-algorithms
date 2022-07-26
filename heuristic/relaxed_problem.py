@@ -38,5 +38,6 @@ ga.print_population()
 ga.plot_fitness_values()
 
 solution = ga.get_best_solution()
+solution.plot_memory()
 
 print(f'Best solution: {solution}')
