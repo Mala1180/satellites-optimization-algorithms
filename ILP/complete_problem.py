@@ -1,12 +1,14 @@
-import sys
-import numpy as np
 import json
-import gurobipy as gp
-from gurobipy import GRB
 import time
-from utils.functions import overlap, load_instance
-import matplotlib.pyplot as plt
 
+import gurobipy as gp
+import matplotlib.pyplot as plt
+import numpy as np
+from gurobipy import GRB
+
+from utils.functions import overlap, load_instance
+
+INSTANCE = 'day1_40'
 dtos, ars, constants, paws, dlos = load_instance('day1_40')
 
 initial_dlos = dlos
@@ -58,7 +60,6 @@ start = time.time()
 
 # add the decision variables to the model
 dtos_variables = list(model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY, name="DTOs"))
-# dlos_variables = list(model.addMVar((DLOS_NUMBER,), vtype=GRB.BINARY, name="DLOs"))
 
 z_ji = []
 for index in range(DLOS_NUMBER):
@@ -71,8 +72,8 @@ for i1, dto1 in enumerate(dtos):
     for i2, dto2 in enumerate(dtos):
         if overlap(dto1, dto2) and dto1 != dto2:
             # add overlapping constraints
-            model.addLConstr(dtos_variables[i1] + dtos_variables[i2] <= 1,
-                             f"Overlapping_constraint_for_DTOs_{dto1['id']}_and_{dto2['id']}")
+            model.addConstr(dtos_variables[i1] + dtos_variables[i2] <= 1,
+                            f"Overlapping_constraint_for_DTOs_{dto1['id']}_and_{dto2['id']}")
 
     if dto1['ar_id'] not in grouped_dtos.keys():
         grouped_dtos[dto1['ar_id']] = [dto1]
@@ -81,13 +82,13 @@ for i1, dto1 in enumerate(dtos):
 
 # add the single satisfaction constraints
 for ar_id in grouped_dtos.keys():
-    model.addLConstr(gp.quicksum([dtos_variables[dtos.index(dto_)] for dto_ in grouped_dtos[ar_id]]) <= 1,
-                     f"Single_satisfaction_constraint_for_AR_{ar_id}")
+    model.addConstr(gp.quicksum([dtos_variables[dtos.index(dto_)] for dto_ in grouped_dtos[ar_id]]) <= 1,
+                    f"Single_satisfaction_constraint_for_AR_{ar_id}")
 
 # add the taken memory constraints
 satellite_memories = [gp.quicksum([memories[i] * dtos_variables[i] for i, dto in enumerate(dtos)
                                    if dto['stop_time'] < dlos[0]['start_time']])]
-model.addLConstr(satellite_memories[0] <= CAPACITY, f'Memory_constraint_DLO_0')
+model.addConstr(satellite_memories[0] <= CAPACITY, f'Memory_constraint_DLO_0')
 
 for j in range(1, DLOS_NUMBER):
     satellite_memories.append(satellite_memories[j - 1] -
@@ -96,34 +97,35 @@ for j in range(1, DLOS_NUMBER):
                                            if dto['start_time'] > dlos[j - 1]['stop_time']
                                            and dto['stop_time'] < dlos[j]['start_time']]))
 
-    model.addLConstr(satellite_memories[j] <= CAPACITY, f'Memory_constraint_DLO_{j}')
+    model.addConstr(satellite_memories[j] <= CAPACITY, f'Memory_constraint_DLO_{j}')
 
 # # add DTO selected in plan constraint
 # for j in range(DLOS_NUMBER):
 #     for i in range(DTOS_NUMBER):
-#         model.addLConstr(x_ji[j][i] <= dtos_variables[i], f'DTO_selected_in_plan_constraint_DLO:{j}_DTO:{i}')
+#         model.addConstr(z_ji[j][i] <= dtos_variables[i], f'DTO_selected_in_plan_constraint_DLO:{j}_DTO:{i}')
 #
 # # add single downlink constraint
 # for i in range(DTOS_NUMBER):
-#     model.addLConstr(gp.quicksum([x_ji[j][i] for j in range(DLOS_NUMBER)]) <= 1)
+#     model.addConstr(gp.quicksum([z_ji[j][i] for j in range(DLOS_NUMBER)]) <= 1)
 
-# last two constraints can be reduced to the next one (maybe)
+# last two commented constraints can be reduced to the next one (maybe)
 for i in range(DTOS_NUMBER):
-    model.addLConstr(gp.quicksum([z_ji[j][i] for j in range(DLOS_NUMBER)]) <= dtos_variables[i])
+    model.addConstr(gp.quicksum([z_ji[j][i] for j in range(DLOS_NUMBER)]) <= dtos_variables[i],
+                    f'Single_downlink_constraint_and_post_acquisition_for_DTO_{i}')
 
 # add downloaded memory constraint
 for j in range(DLOS_NUMBER):
-    model.addLConstr(gp.quicksum([memories[i] * z_ji[j][i] for i in range(DTOS_NUMBER)]) <=
-                     DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']),
-                     f'Downloaded_memory_constraint_DLO_{j}')
+    model.addConstr(gp.quicksum([memories[i] * z_ji[j][i] for i in range(DTOS_NUMBER)]) <=
+                    DOWNLINK_RATE * (dlos[j]['stop_time'] - dlos[j]['start_time']),
+                    f'Downloaded_memory_constraint_DLO_{j}')
 
 # add time constraint
 for j in range(DLOS_NUMBER):
     for i in range(DTOS_NUMBER):
         if dlos[j]['start_time'] < dtos[i]['stop_time']:
-            model.addLConstr(z_ji[j][i] == 0, f'Time_constraint_for_DTO_{i}_DLO_{j}')
+            model.addConstr(z_ji[j][i] == 0, f'Time_constraint_for_DTO_{i}_DLO_{j}')
 
-# set objective function to maximize dto's priority
+# set objective function to maximize dtos priority
 model.setObjective(gp.quicksum([priorities[i] * dtos_variables[i] for i in range(DTOS_NUMBER)]), GRB.MAXIMIZE)
 
 end = time.time()
@@ -164,8 +166,8 @@ if model.Status == GRB.OPTIMAL:
     # dtos remained in memory at the end of plan
     dtos_in_memory = [dto for dto in dtos_taken if dto not in dtos_downloaded]
     memories_in_memory = list(map(lambda dto_: dto_['memory'], dtos_in_memory))
-    print("Memoria occupata:", sum(memories_in_memory))
-    print("DTOs rimaste in memoria", dtos_in_memory)
+    print("Memory occupied:", sum(memories_in_memory))
+    print("DTOs left in memory", dtos_in_memory)
 
     # memories freed during the plan
     freed_memories = []

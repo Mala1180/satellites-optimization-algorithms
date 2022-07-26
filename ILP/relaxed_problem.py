@@ -1,8 +1,9 @@
-import sys
-import numpy as np
-import gurobipy as gp
-from gurobipy import GRB
 import time
+
+import gurobipy as gp
+import numpy as np
+from gurobipy import GRB
+
 from utils.functions import overlap, load_instance
 
 dtos, ars, constants, paws = load_instance('day1_0')[:4]
@@ -50,8 +51,8 @@ for i1, dto1 in enumerate(dtos):
     for i2, dto2 in enumerate(dtos):
         if overlap(dto1, dto2) and dto1 != dto2:
             # add overlapping constraints
-            model.addLConstr(dtos_variables[i1] + dtos_variables[i2] <= 1,
-                             f"Overlapping constraint for DTOs {dto1['id']} and {dto2['id']}")
+            model.addConstr(dtos_variables[i1] + dtos_variables[i2] <= 1,
+                            f"Overlapping constraint for DTOs {dto1['id']} and {dto2['id']}")
 
     if dto1['ar_id'] not in grouped_dtos.keys():
         grouped_dtos[dto1['ar_id']] = [dto1]
@@ -60,13 +61,13 @@ for i1, dto1 in enumerate(dtos):
 
 # add the single satisfaction constraints
 for ar_id in grouped_dtos.keys():
-    model.addLConstr(gp.quicksum([dtos_variables[dtos.index(dto_)] for dto_ in grouped_dtos[ar_id]]) <= 1,
-                     f"Single satisfaction constraint for {ar_id}")
+    model.addConstr(gp.quicksum([dtos_variables[dtos.index(dto_)] for dto_ in grouped_dtos[ar_id]]) <= 1,
+                    f"Single satisfaction constraint for {ar_id}")
 
 # add the memory constraint
-model.addLConstr(gp.quicksum([memories[i] * dtos_variables[i] for i in range(DTOS_NUMBER)]) <= CAPACITY,
-                 "Memory constraint")
-# set objective function to maximize dto's priority
+model.addConstr(gp.quicksum([memories[i] * dtos_variables[i] for i in range(DTOS_NUMBER)]) <= CAPACITY,
+                "Memory constraint")
+# set objective function to maximize dtos priority
 model.setObjective(gp.quicksum([priorities[i] * dtos_variables[i] for i in range(DTOS_NUMBER)]), GRB.MAXIMIZE)
 
 end = time.time()
@@ -79,7 +80,7 @@ start = time.time()
 model.optimize()
 
 if model.Status == GRB.INF_OR_UNBD:
-    # Turn presolve off to determine whether model is infeasible
+    # Turn pre-solve off to determine whether model is infeasible
     # or unbounded
     model.setParam(GRB.Param.Presolve, 0)
     model.optimize()
@@ -87,7 +88,6 @@ if model.Status == GRB.OPTIMAL:
     print('Optimal objective: %g' % model.ObjVal)
     print(model.getJSONSolution())
     print(f'Number of constraints: {len(model.getConstrs())}')
-    # print("RESOCONTO", model.display())
 elif model.Status != GRB.INFEASIBLE:
     print('Optimization was stopped with status %d' % model.Status)
 
