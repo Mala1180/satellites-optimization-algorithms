@@ -1,15 +1,14 @@
-from random import sample, choice, choices
+from random import sample, choice
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from heuristic.genetic.Chromosome import Chromosome
-from heuristic.genetic.crossover.MultiPointCrossover import MultiPointCrossover
-from heuristic.genetic.crossover.SinglePointCrossover import SinglePointCrossover
-from heuristic.genetic.parent_selection.RouletteWheelSelection import RouletteWheelSelection
-
-from heuristic.genetic.types import DTO
-from utils.Constraint import Constraint
+from .crossover import MultiPointCrossover
+from .crossover import SinglePointCrossover
+from . import Chromosome
+from .my_types import DTO
+from .parent_selection import RouletteWheelSelection
+from utils import Constraint
 
 
 class GeneticAlgorithm:

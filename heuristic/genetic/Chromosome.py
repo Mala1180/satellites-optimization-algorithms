@@ -1,8 +1,9 @@
+from typing import Optional
+
 import numpy as np
 
-from typing import Optional
-from heuristic.genetic.types import DTO, AR, ndarray
-from utils.Constraint import Constraint
+from .my_types import DTO, AR, ndarray
+from utils import Constraint
 from utils.functions import overlap, binary_search, find_insertion_point
 
 
