@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from gurobipy import GRB
 
-from utils import overlap, load_instance
+from utils.functions import overlap, load_instance
 
 INSTANCE = 'day1_40'
 dtos, ars, constants, paws, dlos = load_instance('day1_40')
@@ -206,7 +206,7 @@ if model.Status == GRB.OPTIMAL:
     #     print(json_solution['Vars'])
     #     print(old_json['Vars'] == json_solution['Vars'])
 
-    model.write(f'../data/{INSTANCE}/model.lp')
+    model.write(f'../instances/{INSTANCE}/model.lp')
 
 elif model.Status != GRB.INFEASIBLE:
     print('Optimization was stopped with status %d' % model.Status)

@@ -3,9 +3,9 @@ from typing import Optional
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .my_types import DTO, AR, ndarray
 from utils import Constraint
-from utils import overlap, binary_search, find_insertion_point
+from utils.functions import overlap, binary_search, find_insertion_point
+from .my_types import DTO, AR, ndarray
 
 
 class Chromosome:

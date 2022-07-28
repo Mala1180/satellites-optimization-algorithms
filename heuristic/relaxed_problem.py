@@ -1,6 +1,5 @@
-from utils.functions import load_instance, overlap
-
 from genetic import GeneticAlgorithm
+from utils.functions import load_instance, overlap
 
 dtos, ars, constants, paws = load_instance('day1_0')[:4]
 
