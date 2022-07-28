@@ -17,7 +17,6 @@ class GeneticAlgorithm:
     def __init__(self, capacity, total_dtos, total_ars, num_generations=150, num_chromosomes=20,
                  crossover_strategy='multi'):
         """ Creates a random initial population and prepares data for the algorithm """
-        self.parent_selection_strategy = RouletteWheelSelection()
         if crossover_strategy == 'single':
             self.crossover_strategy = SinglePointCrossover()
         elif crossover_strategy == 'multi':
@@ -52,10 +51,10 @@ class GeneticAlgorithm:
     def parent_selection(self) -> [Chromosome]:
         """ Chooses and returns the chromosomes to make crossover with roulette wheel selection method """
         self.parents = []
-
+        parent_selection_strategy = RouletteWheelSelection(self.population)
         # finds number of couples equals to population length - elites length
         for i in range(len(self.population) - len(self.elites)):
-            parents: (Chromosome, Chromosome) = self.parent_selection_strategy.select(self.population)
+            parents: (Chromosome, Chromosome) = parent_selection_strategy.select()
             self.parents.append(parents)
 
     def crossover(self):
