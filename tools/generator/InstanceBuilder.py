@@ -4,7 +4,7 @@ from math import floor
 from pathlib import Path
 from random import randint
 
-from tools.Instance import Instance
+from .Instance import Instance
 
 
 class InstanceBuilder:
@@ -81,7 +81,7 @@ class InstanceBuilder:
 
     def save_instance(self):
         """ Saves the instance to a directory named as the instance """
-        root_directory = Path(__file__).absolute().parent.parent
+        root_directory = Path(__file__).absolute().parent.parent.parent
         path = os.path.join(f'{root_directory}/instances', self.name)
         if not os.path.exists(path):
             os.makedirs(path)

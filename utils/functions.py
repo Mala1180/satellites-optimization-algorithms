@@ -7,11 +7,11 @@ def load_instance(instance: str) -> tuple:
     # read JSON files
     root_dir = os.path.dirname(__file__)
     print(root_dir)
-    dtos_file = open(f'{root_dir}/../data/{instance}/DTOs.json')
-    ars_file = open(f'{root_dir}/../data/{instance}/ARs.json')
-    constants_file = open(f'{root_dir}/../data/{instance}/constants.json')
-    paws_file = open(f'{root_dir}/../data/{instance}/PAWs.json')
-    dlos_file = open(f'{root_dir}/../data/{instance}/DLOs.json')
+    dtos_file = open(f'{root_dir}/../instances/{instance}/DTOs.json')
+    ars_file = open(f'{root_dir}/../instances/{instance}/ARs.json')
+    constants_file = open(f'{root_dir}/../instances/{instance}/constants.json')
+    paws_file = open(f'{root_dir}/../instances/{instance}/PAWs.json')
+    dlos_file = open(f'{root_dir}/../instances/{instance}/DLOs.json')
 
     # loads JSON, the result is a dictionary
     dtos = json.loads(dtos_file.read())
