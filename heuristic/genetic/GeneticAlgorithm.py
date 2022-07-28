@@ -54,7 +54,7 @@ class GeneticAlgorithm:
         parent_selection_strategy = RouletteWheelSelection(self.population)
         # finds number of couples equals to population length - elites length
         for i in range(len(self.population) - len(self.elites)):
-            parents: (Chromosome, Chromosome) = parent_selection_strategy.select()
+            parents: (Chromosome, Chromosome) = parent_selection_strategy.select(self.population)
             self.parents.append(parents)
 
     def crossover(self):
