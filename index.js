@@ -9,8 +9,7 @@ const port = 3000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 app.use(cors());
-app.use('tools/instance_viewer', express.static('tools/instance_viewer'));
-
+app.use(express.static('tools/instance_viewer'));
 app.get('/', (req, res) => {
     res.sendFile('viewer.html', { root: path.join(__dirname, './tools/instance_viewer') });
 });
