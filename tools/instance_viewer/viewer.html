@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instance Viewer</title>
+
+    <link rel="stylesheet" href="./viewer.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.8.2/dist/chart.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="./viewer.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>Instance Viewer</h1>
+    </header>
+
+    <main>
+        <div>
+            <h2>Istanza: </h2>
+            <select name="select-instances" id="select-instances">
+            </select>
+        </div>
+
+        <canvas id="myChart"></canvas>
+    </main>
+</body>
+
+</html>

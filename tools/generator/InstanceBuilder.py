@@ -1,8 +1,11 @@
+import datetime
 import json
+import math
 import os
-from math import floor
 from pathlib import Path
-from random import randint
+from random import randint, randrange
+
+import numpy as np
 
 from .Instance import Instance
 
@@ -24,35 +27,39 @@ class InstanceBuilder:
         self.instance.constants = {'MEMORY_CAP': memory_cap, 'DOWNLINK_RATE': downlink_rate}
         return self
 
-    # def generate_ars(self, length: int, max_rank: int):
-    #     """
-    #     Generates the ARs of the instance
-    #     :param length: number of ARs to generate
-    #     :param max_rank: the maximum rant an AR can have
-    #     """
-    #     for i in range(length):
-    #         self.instance.ars.append({"id": i, "rank": randint(0, max_rank)})
-    #     self.instance.constants['NUM_ARS'] = length
-    #     return self
-
-    def generate_dtos(self, length: int, max_memory: float, ar_percentage: float, max_rank: int):
+    def generate_ars_and_dtos(self, ars_length: int, dto_per_ar: int, variance: float, max_memory: float,
+                              max_rank: int):
         """
         Generates the DTOs of the instance
-        :param length: number of DTOs to generate
+        :param ars_length: number of ARs to generate
+        :param dto_per_ar: number of DTOs per AR on average
+        :param variance: index of the variance of the DTOs per AR
         :param max_memory: the maximum memory a DTO can have
         :param max_rank: the maximum priority a DTO can have (AR rank)
-        :param ar_percentage: percentage of ARs respect to DTOs
         """
-        ars_length: int = floor(length * ar_percentage)
-        for i in range(length):
-            if i < ars_length:
-                self.instance.ars.append({"id": i, "rank": randint(0, max_rank)})
-                ar_id = i
-            else:
-                ar_id = randint(0, ars_length)
-            self.instance.dtos.append({"id": i, "ar_id": ar_id, "start_time": 418257802.937371,
-                                       "stop_time": 418257822.937371, "memory": max_memory})
-        self.instance.constants['NUM_DTOS'] = length
+        mu, sigma = dto_per_ar, math.sqrt(variance)  # mean and standard deviation
+        num_dto_per_ar = np.random.normal(mu, sigma, ars_length)
+
+        print(num_dto_per_ar, len(num_dto_per_ar))
+
+        start_plan = datetime.datetime.today()
+        end_plan = start_plan + datetime.timedelta(hours=2)
+        time_between_dates = end_plan - start_plan
+
+        counter_id: int = 0
+        for i, num_dtos in enumerate(num_dto_per_ar):
+            self.instance.ars.append({"id": i, "rank": randint(0, max_rank)})
+
+            for j in range(int(num_dtos)):
+                random_start_date = start_plan + datetime.timedelta(seconds=randrange(time_between_dates.seconds))
+                random_end_date = random_start_date + datetime.timedelta(seconds=randrange(120))
+                self.instance.dtos.append({"id": counter_id, "ar_id": i,
+                                           "start_time": random_start_date.timestamp(),
+                                           "stop_time": random_end_date.timestamp(),
+                                           "memory": max_memory})
+                counter_id += 1
+
+        self.instance.constants['NUM_DTOS'] = len(self.instance.dtos)
         self.instance.constants['NUM_ARS'] = ars_length
         return self
 
@@ -71,8 +78,15 @@ class InstanceBuilder:
         Generates the DLOs of the instance
         :param length: number of DLOs to generate
         """
+        start_plan = datetime.datetime.today()
+        end_plan = start_plan + datetime.timedelta(hours=2)
+        time_between_dates = end_plan - start_plan
         for i in range(length):
-            self.instance.dlos.append({"id": i, "start_time": 418257802.937371, "stop_time": 418257822.937371})
+            random_start_date = start_plan + datetime.timedelta(seconds=randrange(time_between_dates.seconds))
+            random_end_date = random_start_date + datetime.timedelta(seconds=randrange(100))
+            self.instance.dlos.append({"id": i,
+                                       "start_time": random_start_date,
+                                       "stop_time": random_end_date})
         self.instance.constants['NUM_DLOS'] = length
         return self
 

@@ -1,1 +1,82 @@
-[{"start_time": 418201161.999371, "stop_time": 418201634.999371, "left": true}, {"start_time": 418206658.999371, "stop_time": 418207116.999371, "left": true}, {"start_time": 418212142.999371, "stop_time": 418212594.999371, "left": true}, {"start_time": 418217619.999371, "stop_time": 418218083.999371, "left": true}, {"start_time": 418223108.999371, "stop_time": 418223585.999371, "left": true}, {"start_time": 418228123.999371, "stop_time": 418228515.999371, "left": true}, {"start_time": 418228630.999371, "stop_time": 418229096.999371, "left": false}, {"start_time": 418233618.999371, "stop_time": 418234012.999371, "left": false}, {"start_time": 418234200.999371, "stop_time": 418234611.999371, "left": false}, {"start_time": 418239836.999371, "stop_time": 418240119.999371, "left": false}, {"start_time": 418267932.999371, "stop_time": 418268186.999371, "left": false}, {"start_time": 418273437.999371, "stop_time": 418273834.999371, "left": false}, {"start_time": 418274038.999371, "stop_time": 418274418.999371, "left": false}, {"start_time": 418278952.999371, "stop_time": 418279413.999371, "left": false}, {"start_time": 418279525.999371, "stop_time": 418279928.999371, "left": true}, {"start_time": 418284464.999371, "stop_time": 418284941.999371, "left": false}]
+[
+    {
+        "start_time": 418201161.999371,
+        "stop_time": 418201634.999371,
+        "left": true
+    },
+    {
+        "start_time": 418206658.999371,
+        "stop_time": 418207116.999371,
+        "left": true
+    },
+    {
+        "start_time": 418212142.999371,
+        "stop_time": 418212594.999371,
+        "left": true
+    },
+    {
+        "start_time": 418217619.999371,
+        "stop_time": 418218083.999371,
+        "left": true
+    },
+    {
+        "start_time": 418223108.999371,
+        "stop_time": 418223585.999371,
+        "left": true
+    },
+    {
+        "start_time": 418228123.999371,
+        "stop_time": 418228515.999371,
+        "left": true
+    },
+    {
+        "start_time": 418228630.999371,
+        "stop_time": 418229096.999371,
+        "left": false
+    },
+    {
+        "start_time": 418233618.999371,
+        "stop_time": 418234012.999371,
+        "left": false
+    },
+    {
+        "start_time": 418234200.999371,
+        "stop_time": 418234611.999371,
+        "left": false
+    },
+    {
+        "start_time": 418239836.999371,
+        "stop_time": 418240119.999371,
+        "left": false
+    },
+    {
+        "start_time": 418267932.999371,
+        "stop_time": 418268186.999371,
+        "left": false
+    },
+    {
+        "start_time": 418273437.999371,
+        "stop_time": 418273834.999371,
+        "left": false
+    },
+    {
+        "start_time": 418274038.999371,
+        "stop_time": 418274418.999371,
+        "left": false
+    },
+    {
+        "start_time": 418278952.999371,
+        "stop_time": 418279413.999371,
+        "left": false
+    },
+    {
+        "start_time": 418279525.999371,
+        "stop_time": 418279928.999371,
+        "left": true
+    },
+    {
+        "start_time": 418284464.999371,
+        "stop_time": 418284941.999371,
+        "left": false
+    }
+]

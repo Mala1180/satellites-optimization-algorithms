@@ -1,0 +1,15 @@
+main div {
+    width: 100%;
+    display: flex;
+    justify-self: center;
+    align-items: center;
+}
+
+main div h2 {
+    margin: 0;
+}
+
+main div select {
+    height: 2em;
+    margin-left: 10px;
+}
