@@ -35,8 +35,9 @@ function getInstance(name) {
         dtos = dtos.slice(0, dtoLength);
 
         dtos.forEach(function (dto) {
-            const start = new Date(dto.start_time).getTime();
-            const stop = new Date(dto.stop_time).getTime();
+            // multiplied by 1000 so that the argument is in milliseconds, not seconds.
+            const start = new Date(dto.start_time * 1000).getTime();
+            const stop = new Date(dto.stop_time * 1000).getTime();
             dataset.push([start, stop]);
         });
 
@@ -56,7 +57,8 @@ function getInstance(name) {
                 barThickness: 3,
             }]
         };
-        console.log("minimum", dtos.map(dto => new Date(dto.start_time).getTime()).reduce((a, b) => Math.min(a, b)));
+        const startTime = dtos.map(dto => new Date(dto.start_time * 1000).getTime()).reduce((a, b) => Math.min(a, b))
+        document.getElementById("start-date").textContent = `Start of the plan: ${new Date(startTime).toLocaleString()}`;
         // config 
         const config = {
             type: 'bar',
@@ -74,7 +76,7 @@ function getInstance(name) {
                 indexAxis: 'y',
                 scales: {
                     x: {
-                        min: dtos.map(dto => new Date(dto.start_time).getTime()).reduce((a, b) => Math.min(a, b)),
+                        min: startTime,
                         type: 'time'
                     },
                     y: {

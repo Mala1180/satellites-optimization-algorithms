@@ -13,3 +13,8 @@ main div select {
     height: 2em;
     margin-left: 10px;
 }
+
+main p {
+    width: 100%;
+    text-align: center;
+}
