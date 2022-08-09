@@ -9,7 +9,7 @@ from gurobipy import GRB
 from utils.functions import overlap, load_instance
 
 INSTANCE = 'day1_40'
-dtos, ars, constants, paws, dlos = load_instance('day1_40')
+dtos, ars, constants, paws, dlos = load_instance(INSTANCE)
 
 initial_dlos = dlos
 
@@ -39,6 +39,7 @@ DOWNLINK_RATE = constants['DOWNLINK_RATE']
 DTOS_NUMBER = len(dtos)
 DLOS_NUMBER = len(dlos)
 
+print("CAPACITY:", CAPACITY)
 print(f"Total DTOs: {len(dtos)}")
 print(f"Filtered DTOs: {len(filtered_dtos)}")
 print(f"Total DLOs: {len(dlos)}")
@@ -167,6 +168,7 @@ if model.Status == GRB.OPTIMAL:
     dtos_in_memory = [dto for dto in dtos_taken if dto not in dtos_downloaded]
     memories_in_memory = list(map(lambda dto_: dto_['memory'], dtos_in_memory))
     print("Memory occupied:", sum(memories_in_memory))
+    print(f"DTOs taken ({len(dtos_taken)}): {dtos_taken}")
     print("DTOs left in memory", dtos_in_memory)
 
     # memories freed during the plan
@@ -199,14 +201,6 @@ if model.Status == GRB.OPTIMAL:
 
     with open(f'../instances/{INSTANCE}/result.json', 'w') as f:
         json.dump(json_solution, f)
-
-    # with open(f'../instances/{INSTANCE}/result.json') as f:
-    #     old_json = json.loads(f.read())
-    #     print(old_json['Vars'])
-    #     print(json_solution['Vars'])
-    #     print(old_json['Vars'] == json_solution['Vars'])
-
-    model.write(f'../instances/{INSTANCE}/model.lp')
 
 elif model.Status != GRB.INFEASIBLE:
     print('Optimization was stopped with status %d' % model.Status)

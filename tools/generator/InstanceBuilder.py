@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import math
 from random import randint, randrange
 
 import numpy as np
@@ -28,18 +27,18 @@ class InstanceBuilder:
         self.instance.constants = {'MEMORY_CAP': memory_cap, 'DOWNLINK_RATE': downlink_rate}
         return self
 
-    def generate_ars_and_dtos(self, ars_length: int, dto_per_ar: int, variance: float, max_memory: float,
+    def generate_ars_and_dtos(self, ars_length: int, dto_per_ar: int, std_dev: float, max_memory: float,
                               max_rank: int):
         """
         Generates the DTOs of the instance
 
         :param ars_length: number of ARs to generate
         :param dto_per_ar: number of DTOs per AR on average
-        :param variance: index of the variance of the DTOs per AR
+        :param std_dev: index of the standard deviation
         :param max_memory: the maximum memory a DTO can have
         :param max_rank: the maximum priority a DTO can have (AR rank)
         """
-        mu, sigma = dto_per_ar, math.sqrt(variance)  # mean and standard deviation
+        mu, sigma = dto_per_ar, std_dev  # mean and standard deviation
         num_dto_per_ar = np.random.normal(mu, sigma, ars_length)
 
         print(num_dto_per_ar)
