@@ -17,7 +17,7 @@ initial_dlos = dlos
 filtered_dtos = []
 for dto in dtos:
     skip = False
-    for event in paws + dlos:
+    for event in paws:  # + dlos:
         if overlap(dto, event):
             skip = True
             break
@@ -25,7 +25,7 @@ for dto in dtos:
         filtered_dtos.append(dto)
 
 dtos = filtered_dtos
-dlos = sorted(dlos, key=lambda dlo: dlo['start_time'])
+dlos = sorted(dlos, key=lambda dlo_: dlo_['start_time'])
 
 # add the dummy variable for some next constraints
 stop_time = max(dtos[len(dtos) - 1]['stop_time'], dlos[len(dlos) - 1]['stop_time'])
@@ -61,6 +61,7 @@ start = time.time()
 
 # add the decision variables to the model
 dtos_variables = list(model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY, name="DTOs"))
+dlos_variables = list(model.addMVar((DLOS_NUMBER,), vtype=GRB.BINARY, name="DLOs"))
 
 z_ji = []
 for index in range(DLOS_NUMBER):
@@ -68,18 +69,24 @@ for index in range(DLOS_NUMBER):
 
 grouped_dtos = dict()
 
-# for each couple of dtos which overlap add a constraint
 for i1, dto1 in enumerate(dtos):
+    # add overlapping constraints between dtos
     for i2, dto2 in enumerate(dtos):
         if overlap(dto1, dto2) and dto1 != dto2:
-            # add overlapping constraints
             model.addConstr(dtos_variables[i1] + dtos_variables[i2] <= 1,
                             f"Overlapping_constraint_for_DTOs_{dto1['id']}_and_{dto2['id']}")
+
+    # add overlapping constraints between dtos and dlos
+    for dlo_index, dlo in enumerate(dlos):
+        if overlap(dto1, dlo):
+            model.addConstr(dtos_variables[i1] + dlos_variables[dlo_index] <= 1,
+                            f"Overlapping_constraint_between_DTO_{dto1['id']}_and_DLO_{dlo_index}")
 
     if dto1['ar_id'] not in grouped_dtos.keys():
         grouped_dtos[dto1['ar_id']] = [dto1]
     else:
         grouped_dtos[dto1['ar_id']].append(dto1)
+
 
 # add the single satisfaction constraints
 for ar_id in grouped_dtos.keys():
@@ -92,11 +99,12 @@ satellite_memories = [gp.quicksum([memories[i] * dtos_variables[i] for i, dto in
 model.addConstr(satellite_memories[0] <= CAPACITY, f'Memory_constraint_DLO_0')
 
 for j in range(1, DLOS_NUMBER):
-    satellite_memories.append(satellite_memories[j - 1] -
-                              gp.quicksum([memories[i] * z_ji[j - 1][i] for i in range(DTOS_NUMBER)]) +
-                              gp.quicksum([memories[i] * dtos_variables[i] for i, dto in enumerate(dtos)
-                                           if dto['start_time'] > dlos[j - 1]['stop_time']
-                                           and dto['stop_time'] < dlos[j]['start_time']]))
+    satellite_memories.append(satellite_memories[j - 1]
+                              - gp.quicksum([memories[i] * z_ji[j - 1][i] for i in range(DTOS_NUMBER)])
+                              * dlos_variables[j]
+                              + gp.quicksum([memories[i] * dtos_variables[i] for i, dto in enumerate(dtos)
+                                             if dto['start_time'] > dlos[j - 1]['stop_time']
+                                             and dto['stop_time'] < dlos[j]['start_time']]))
 
     model.addConstr(satellite_memories[j] <= CAPACITY, f'Memory_constraint_DLO_{j}')
 
