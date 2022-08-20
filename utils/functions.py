@@ -24,7 +24,8 @@ def load_instance(instance: str) -> tuple:
 
 def overlap(event1, event2):
     """ Returns True if events overlap, False otherwise """
-    return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time']
+    return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time'] \
+        and event1 != event2
 
 
 def binary_search(dto, plan, low, high) -> int:

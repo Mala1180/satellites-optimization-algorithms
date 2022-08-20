@@ -17,7 +17,7 @@ initial_dlos = dlos
 filtered_dtos = []
 for dto in dtos:
     skip = False
-    for event in paws:  # + dlos:
+    for event in paws + dlos:
         if overlap(dto, event):
             skip = True
             break
@@ -77,10 +77,10 @@ for i1, dto1 in enumerate(dtos):
                             f"Overlapping_constraint_for_DTOs_{dto1['id']}_and_{dto2['id']}")
 
     # add overlapping constraints between dtos and dlos
-    for dlo_index, dlo in enumerate(dlos):
-        if overlap(dto1, dlo):
-            model.addConstr(dtos_variables[i1] + dlos_variables[dlo_index] <= 1,
-                            f"Overlapping_constraint_between_DTO_{dto1['id']}_and_DLO_{dlo_index}")
+    # for dlo_index, dlo in enumerate(dlos):
+    #     if overlap(dto1, dlo):
+    #         model.addConstr(dtos_variables[i1] + dlos_variables[dlo_index] <= 1,
+    #                         f"Overlapping_constraint_between_DTO_{dto1['id']}_and_DLO_{dlo_index}")
 
     if dto1['ar_id'] not in grouped_dtos.keys():
         grouped_dtos[dto1['ar_id']] = [dto1]
@@ -101,7 +101,7 @@ model.addConstr(satellite_memories[0] <= CAPACITY, f'Memory_constraint_DLO_0')
 for j in range(1, DLOS_NUMBER):
     satellite_memories.append(satellite_memories[j - 1]
                               - gp.quicksum([memories[i] * z_ji[j - 1][i] for i in range(DTOS_NUMBER)])
-                              * dlos_variables[j]
+                              # * dlos_variables[j]
                               + gp.quicksum([memories[i] * dtos_variables[i] for i, dto in enumerate(dtos)
                                              if dto['start_time'] > dlos[j - 1]['stop_time']
                                              and dto['stop_time'] < dlos[j]['start_time']]))

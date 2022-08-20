@@ -4,7 +4,7 @@ from random import randint, randrange
 import numpy as np
 
 from .Instance import Instance
-
+from utils.functions import overlap
 
 class InstanceBuilder:
 
@@ -48,7 +48,7 @@ class InstanceBuilder:
             self.instance.ars.append({"id": i, "rank": randint(0, max_rank)})
 
             for j in range(int(num_dtos)):
-                random_start_date = self.instance.start +\
+                random_start_date = self.instance.start + \
                                     timedelta(seconds=randrange(self.instance.time_between_dates.seconds))
                 random_end_date = random_start_date + timedelta(seconds=randrange(120))
                 self.instance.dtos.append({"id": counter_id, "ar_id": i,
@@ -68,7 +68,7 @@ class InstanceBuilder:
         :param length: number of PAWs to generate
         """
         for i in range(length):
-            random_start_date = self.instance.start +\
+            random_start_date = self.instance.start + \
                                 timedelta(seconds=randrange(self.instance.time_between_dates.seconds))
             random_end_date = random_start_date + timedelta(seconds=randrange(100))
             self.instance.paws.append({"id": i,
@@ -84,13 +84,25 @@ class InstanceBuilder:
         :param length: number of DLOs to generate
         """
         for i in range(length):
-            random_start_date = self.instance.start +\
+            random_start_date = self.instance.start + \
                                 timedelta(seconds=randrange(self.instance.time_between_dates.seconds))
             random_end_date = random_start_date + timedelta(seconds=randrange(100))
-            self.instance.dlos.append({"id": i,
-                                       "start_time": random_start_date.timestamp(),
-                                       "stop_time": random_end_date.timestamp()})
+            dlo = {"id": i,
+                   "start_time": random_start_date.timestamp(),
+                   "stop_time": random_end_date.timestamp()}
+            skip = False
+            for j in range(len(self.instance.dlos)):
+                if overlap(dlo, self.instance.dlos[j]):
+                    i -= 1
+                    skip = True
+
+            if not skip:
+                self.instance.dlos.append(dlo)
         self.instance.constants['NUM_DLOS'] = length
+        for dlo1 in self.instance.dlos:
+            for dlo2 in self.instance.dlos:
+                if overlap(dlo1, dlo2):
+                    print("Overlap between {} and {}".format(dlo1, dlo2))
         return self
 
     def get_instance(self) -> Instance:
