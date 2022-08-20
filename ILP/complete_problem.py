@@ -8,7 +8,7 @@ from gurobipy import GRB
 
 from utils.functions import overlap, load_instance
 
-INSTANCE = 'day1_40'
+INSTANCE = 'test_large'
 dtos, ars, constants, paws, dlos = load_instance(INSTANCE)
 
 initial_dlos = dlos
@@ -108,6 +108,8 @@ for j in range(1, DLOS_NUMBER):
 
     model.addConstr(satellite_memories[j] <= CAPACITY, f'Memory_constraint_DLO_{j}')
 
+print()
+
 # # add DTO selected in plan constraint
 # for j in range(DLOS_NUMBER):
 #     for i in range(DTOS_NUMBER):
@@ -177,7 +179,7 @@ if model.Status == GRB.OPTIMAL:
     memories_in_memory = list(map(lambda dto_: dto_['memory'], dtos_in_memory))
     print("Memory occupied:", sum(memories_in_memory))
     print(f"DTOs taken ({len(dtos_taken)}): {dtos_taken}")
-    print("DTOs left in memory", dtos_in_memory)
+    print(f"DTOs left in memory ({len(dtos_in_memory)}): {dtos_in_memory}")
 
     # memories freed during the plan
     freed_memories = []
