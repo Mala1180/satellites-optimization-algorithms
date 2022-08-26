@@ -45,9 +45,9 @@ class Chromosome:
             Returns True if the insertion """
         if np.any(self.dtos == dto):
             return False
-        if len(self.dtos) == 0 or dto['stop_time'] < self.dtos[0]['start_time']:
+        if len(self.dtos) == 0 or dto['start_time'] <= self.dtos[0]['start_time']:
             index = 0
-        elif dto['start_time'] > self.dtos[-1]['stop_time']:
+        elif dto['start_time'] >= self.dtos[-1]['start_time']:
             index = len(self.dtos)
         else:
             index = find_insertion_point(dto, self.dtos, 0, len(self.dtos) - 1)

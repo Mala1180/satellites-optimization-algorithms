@@ -55,7 +55,7 @@ def find_insertion_point(dto, plan, low, high) -> int:
     while high >= low:
         mid = low + (high - low) // 2
 
-        if plan[mid]['start_time'] <= dto['start_time'] < plan[mid + 1]['start_time']:
+        if plan[mid]['start_time'] <= dto['start_time'] <= plan[mid + 1]['start_time']:
             return mid + 1
 
         elif dto['start_time'] > plan[mid]['start_time']:
