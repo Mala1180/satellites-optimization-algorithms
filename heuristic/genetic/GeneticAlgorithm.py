@@ -3,12 +3,12 @@ from random import sample, choice
 import matplotlib.pyplot as plt
 import numpy as np
 
+from utils import Constraint
+from . import Chromosome
 from .crossover import MultiPointCrossover
 from .crossover import SinglePointCrossover
-from . import Chromosome
 from .my_types import DTO
 from .parent_selection import RouletteWheelSelection
-from utils import Constraint
 
 
 class GeneticAlgorithm:
@@ -35,8 +35,8 @@ class GeneticAlgorithm:
 
         for i in range(num_chromosomes):
             chromosome = Chromosome(self.capacity, total_ars)
-
             shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
+
             for dto in shuffled_dtos:
                 if chromosome.size() == 0 or chromosome.keeps_feasibility(dto):
                     chromosome.add_dto(dto)
@@ -69,7 +69,7 @@ class GeneticAlgorithm:
 
     def mutation(self):
         """ Mutates randomly the 10% of each chromosome in the population """
-        for chromosome in self.population:
+        for chromosome in list(set(self.population) - set(self.elites)):
             # Inserts 10 random DTOs in the plan
             # for _ in range(10):
             #     new_dto = choice(self.total_dtos)
@@ -80,9 +80,9 @@ class GeneticAlgorithm:
             for _ in range(len(chromosome.dtos) // 10):
                 new_dto = choice(self.total_dtos)
 
-                if chromosome.keeps_feasibility(new_dto):
-                    chromosome.remove_dto_at(np.random.randint(0, len(chromosome.dtos)))
-                    chromosome.add_dto(new_dto)
+                # if chromosome.keeps_feasibility(new_dto):
+                chromosome.remove_dto_at(np.random.randint(0, len(chromosome.dtos)))
+                chromosome.add_dto(new_dto)
 
     def repair(self):
         """ Repairs the population if some chromosomes are not feasible """
@@ -93,6 +93,8 @@ class GeneticAlgorithm:
                 chromosome.repair_satisfaction()
             if not chromosome.is_feasible(Constraint.MEMORY):
                 chromosome.repair_memory()
+            if not chromosome.is_feasible(Constraint.DUPLICATES):
+                chromosome.repair_duplicates()
 
     def local_search(self):
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
@@ -129,7 +131,8 @@ class GeneticAlgorithm:
             print(f'    - Total priority: {chromosome.get_tot_fitness()}')
             print(f'    - Feasibility: [MEMORY: {chromosome.is_feasible(Constraint.MEMORY)},'
                   f' OVERLAP: {chromosome.is_feasible(Constraint.OVERLAP)},'
-                  f' SINGLE_SATISFACTION: {chromosome.is_feasible(Constraint.SINGLE_SATISFACTION)})]')
+                  f' SINGLE_SATISFACTION: {chromosome.is_feasible(Constraint.SINGLE_SATISFACTION)},'
+                  f' DUPLICATES: {chromosome.is_feasible(Constraint.DUPLICATES)}])')
 
         print(']')
         print(f'Number of chromosomes: {len(self.population)}')

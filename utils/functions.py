@@ -24,15 +24,16 @@ def load_instance(instance: str) -> tuple:
 
 def overlap(event1, event2):
     """ Returns True if events overlap, False otherwise """
-    return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time'] \
-        and event1 != event2
+    return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time']
 
 
-def binary_search(dto, plan, low, high) -> int:
+def binary_search(dto, plan) -> int:
     """ Iterative implementation of binary search.
         Returns index of dto in the given chromosome, -1 if not found """
+    low = 0
+    high = len(plan) - 1
     while high >= low:
-        mid = low + (high - low) // 2
+        mid = (high + low) // 2
 
         # If element is present at the middle itself
         if plan[mid] == dto:
@@ -40,7 +41,7 @@ def binary_search(dto, plan, low, high) -> int:
 
         # If element is smaller than mid, then it can only be present in left sub-array
         elif dto['start_time'] > plan[mid]['start_time']:
-            low = mid - 1
+            low = mid + 1
 
         # Else the element can only be present in right sub-array
         else:
@@ -50,8 +51,10 @@ def binary_search(dto, plan, low, high) -> int:
     return -1
 
 
-def find_insertion_point(dto, plan, low, high) -> int:
+def find_insertion_point(dto, plan) -> int:
     """ Finds the insertion index for a dto in the plan """
+    low = 0
+    high = len(plan) - 1
     while high >= low:
         mid = low + (high - low) // 2
 

@@ -1,3 +1,5 @@
+import collections
+from random import choice
 from typing import Optional
 
 import numpy as np
@@ -17,7 +19,6 @@ class Chromosome:
             dtos = []
         # Loads DTOs
         self.dtos: [DTO] = sorted(dtos, key=lambda dto_: dto_['start_time'])
-        # self.dto_ids: ndarray = np.array([dto['id'] for dto in self.dtos])
         # Loads ARs
         self.ars: [AR] = ars
         self.ar_ids: [int] = list(map(lambda ar: ar['id'], self.ars))
@@ -43,25 +44,26 @@ class Chromosome:
     def add_dto(self, dto: DTO) -> bool:
         """ Adds a DTO to the solution in start time order, updates total memory, fitness and ARs served.
             Returns True if the insertion """
-        if np.any(self.dtos == dto):
-            return False
         if len(self.dtos) == 0 or dto['start_time'] <= self.dtos[0]['start_time']:
             index = 0
         elif dto['start_time'] >= self.dtos[-1]['start_time']:
             index = len(self.dtos)
         else:
-            index = find_insertion_point(dto, self.dtos, 0, len(self.dtos) - 1)
+            index = binary_search(dto, self.dtos)
+            if index != -1:
+                return False
+            else:
+                index = find_insertion_point(dto, self.dtos)
 
         self.dtos.insert(index, dto)
         self.tot_memory += dto['memory']
         self.fitness += dto['priority']
         self.ars_served[dto['ar_index']] = True
-        # self.dto_ids = np.insert(self.dto_ids, index, dto['id'])
         return True
 
     def remove_dto(self, dto: DTO) -> bool:
         """ Removes a DTO from the solution """
-        index = binary_search(dto, self.dtos, 0, len(self.dtos) - 1)
+        index = binary_search(dto, self.dtos)
         if index == -1:
             return False
         return self.remove_dto_at(index)
@@ -79,8 +81,12 @@ class Chromosome:
         return True
 
     def get_memories(self) -> [float]:
-        """ Returns the memory cost of each DTO in the solution """
+        """ Returns the memory costs of each DTO in the solution """
         return list(map(lambda dto_: dto_['memory'], self.dtos))
+
+    def get_dto_ids(self) -> [int]:
+        """ Returns the ids of each DTO in the solution """
+        return list(map(lambda dto_: dto_['id'], self.dtos))
 
     def get_priorities(self) -> [float]:
         """ Returns the priorities of the DTOs in the solution """
@@ -107,52 +113,59 @@ class Chromosome:
 
     def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
+        # Checks if the DTO would exceed the memory limit or if its AR is already served
         if self.ars_served[dto['ar_index']] \
                 or self.get_tot_memory() + dto['memory'] > self.capacity:
             return False
-        else:
-            for dto_ in self.dtos:
-                if overlap(dto, dto_):
-                    return False
-        return True
 
-    def keeps_feasibility_except_memory(self, dto: DTO) -> bool:
-        """ Returns True if the solution would respect all constraints except memory if the DTO would be added """
-        return not self.ars_served[dto['ar_index']] \
-            and not np.any([overlap(dto, dto_test) for dto_test in self.dtos])
+        # Checks if the DTO is already in the plan
+        index = binary_search(dto, self.dtos)
+        if index != -1:
+            return False
+
+        # Checks if the DTO would overlap with another DTO
+        for dto_ in self.dtos:
+            if overlap(dto, dto_):
+                return False
+        return True
 
     def is_feasible(self, constraint: Constraint = None) -> bool:
         """ Checks if the solution is feasible or not.
             If constraint is given, it checks if the solution keeps the constraint,
             otherwise it checks all constraints. """
         if constraint is None:
-            if not self.constraint_feasible(Constraint.MEMORY):
+            if not self.is_constraint_respected(Constraint.MEMORY):
                 return False
-
-            if not self.constraint_feasible(Constraint.OVERLAP):
+            if not self.is_constraint_respected(Constraint.OVERLAP):
                 return False
-
-            if not self.constraint_feasible(Constraint.SINGLE_SATISFACTION):
+            if not self.is_constraint_respected(Constraint.SINGLE_SATISFACTION):
+                return False
+            if not self.is_constraint_respected(Constraint.DUPLICATES):
                 return False
 
             return True
         else:
-            if self.constraint_feasible(constraint):
+            if self.is_constraint_respected(constraint):
                 return True
             else:
                 return False
 
-    def constraint_feasible(self, constraint: Constraint) -> bool:
+    def is_constraint_respected(self, constraint: Constraint) -> bool:
         """ Returns true if the solution respects the given constraint, false otherwise """
         if constraint == Constraint.MEMORY:
             return self.get_tot_memory() < self.capacity
+
         elif constraint == Constraint.OVERLAP:
             for index in range(self.size() - 1):
                 if overlap(self.dtos[index], self.dtos[index + 1]):
                     return False
             return True
+
         elif constraint == Constraint.SINGLE_SATISFACTION:
-            return len(np.unique(self.get_ars_served())) == len(self.get_ars_served())
+            return len(self.get_ars_served()) == len(set(self.get_ars_served()))
+
+        elif constraint == Constraint.DUPLICATES:
+            return len(self.get_dto_ids()) == len(set(self.get_dto_ids()))
 
     def repair_memory(self):
         """ Repairs the memory constraint of the solution """
@@ -170,18 +183,17 @@ class Chromosome:
                     i -= 1
                 i += 1
 
+    def repair_duplicates(self):
+        """ Removes duplicate DTOs from the solution """
+        self.dtos = list(set(self.dtos))
+
     def repair_satisfaction(self):
         """ Repairs the single satisfaction constraint of the solution """
-        while not self.is_feasible(Constraint.SINGLE_SATISFACTION):
-            # ar_ids_served = np.array([dto['ar_id'] for dto in self.dtos])
-            # values, counters = np.unique(ar_ids_served, return_counts=True)
-            # dup = values[counters > 1]
-            # for ar_id in dup:
-            #     index = np.argwhere(ar_ids_served == ar_id)[0][0]
-            #     self.remove_dto_at(index)
-
-            index = np.random.randint(self.size())
-            self.remove_dto_at(index)
+        ars_duplicate = [item for item, count in collections.Counter(self.get_ars_served()).items() if count > 1]
+        for ar_id in ars_duplicate:
+            indexes = np.where(np.array(self.get_ars_served()) == ar_id)[0]
+            for i in indexes:
+                self.remove_dto_at(i)
 
     def plot_memory(self):
         """ Plots the memory of the solution """
@@ -190,8 +202,8 @@ class Chromosome:
         for memory in self.get_memories():
             incremental_memory += memory
             memories.append(incremental_memory)
-        xx = np.arange(self.size())
-        plt.plot(xx, memories, 'r-')
+        x = np.arange(self.size())
+        plt.plot(x, memories, 'r-')
         plt.title('Memory')
         plt.show()
 
