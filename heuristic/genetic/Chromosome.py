@@ -1,5 +1,4 @@
 import collections
-from random import choice
 from typing import Optional
 
 import numpy as np

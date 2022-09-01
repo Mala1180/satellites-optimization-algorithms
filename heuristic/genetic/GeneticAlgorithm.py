@@ -7,6 +7,8 @@ from utils import Constraint
 from . import Chromosome
 from .crossover import MultiPointCrossover
 from .crossover import SinglePointCrossover
+from .crossover import TimeFeasibleCrossover
+
 from .my_types import DTO
 from .parent_selection import RouletteWheelSelection
 
@@ -14,19 +16,22 @@ from .parent_selection import RouletteWheelSelection
 class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
-    def __init__(self, capacity, total_dtos, total_ars, num_generations=150, num_chromosomes=20,
-                 crossover_strategy='multi'):
+    def __init__(self, capacity, total_dtos, total_ars, num_generations=300, num_chromosomes=30,
+                 crossover_strategy='time'):
         """ Creates a random initial population and prepares data for the algorithm """
         if crossover_strategy == 'single':
             self.crossover_strategy = SinglePointCrossover()
         elif crossover_strategy == 'multi':
             self.crossover_strategy = MultiPointCrossover()
+        elif crossover_strategy == 'time':
+            self.crossover_strategy = TimeFeasibleCrossover()
         else:
             raise ValueError(f'Invalid crossover strategy: {crossover_strategy}, choose from "single" or "multi"')
         self.capacity = capacity
         print(f'Capacity: {capacity}')
         self.total_dtos: [DTO] = total_dtos
         self.total_ars: [DTO] = total_ars
+        self.ordered_dtos = sorted(total_dtos, key=lambda dto_: dto_['priority'], reverse=True)
         self.num_generations: int = num_generations
         self.elites: [Chromosome] = []
         self.parents: [(Chromosome, Chromosome)] = []
@@ -81,7 +86,7 @@ class GeneticAlgorithm:
                 new_dto = choice(self.total_dtos)
 
                 # if chromosome.keeps_feasibility(new_dto):
-                chromosome.remove_dto_at(np.random.randint(0, len(chromosome.dtos)))
+                # chromosome.remove_dto_at(np.random.randint(0, len(chromosome.dtos)))
                 chromosome.add_dto(new_dto)
 
     def repair(self):
@@ -99,8 +104,7 @@ class GeneticAlgorithm:
     def local_search(self):
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
         for chromosome in self.population:
-            shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
-            for dto in shuffled_dtos:
+            for dto in self.ordered_dtos:
                 if chromosome.keeps_feasibility(dto):
                     chromosome.add_dto(dto)
 
@@ -126,7 +130,7 @@ class GeneticAlgorithm:
         """ Prints all solutions and the relative info """
         print(f'Population : [')
         for chromosome in self.population:
-            print(f'   ({chromosome.dtos},')
+            print(f'   Len: {len(chromosome.dtos)}, ({chromosome.dtos},')
             print(f'    - Memory occupied: {chromosome.get_tot_memory()},')
             print(f'    - Total priority: {chromosome.get_tot_fitness()}')
             print(f'    - Feasibility: [MEMORY: {chromosome.is_feasible(Constraint.MEMORY)},'
