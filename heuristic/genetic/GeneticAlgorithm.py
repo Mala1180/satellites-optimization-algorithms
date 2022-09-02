@@ -9,15 +9,15 @@ from .crossover import MultiPointCrossover
 from .crossover import SinglePointCrossover
 from .crossover import TimeFeasibleCrossover
 
-from .my_types import DTO
+from .my_types import DTO, DLO
 from .parent_selection import RouletteWheelSelection
 
 
 class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
-    def __init__(self, capacity, total_dtos, total_ars, num_generations=150, num_chromosomes=30,
-                 crossover_strategy='time_feasible'):
+    def __init__(self, capacity, total_dtos, total_ars, total_dlos=None, downlink_rate=None,
+                 num_generations=150, num_chromosomes=30, crossover_strategy='time_feasible'):
         """ Creates a random initial population and prepares data for the algorithm """
         if crossover_strategy == 'single':
             self.crossover_strategy = SinglePointCrossover()
@@ -28,9 +28,11 @@ class GeneticAlgorithm:
         else:
             raise ValueError(f'Invalid crossover strategy: {crossover_strategy}, choose from "single" or "multi"')
         self.capacity = capacity
+        self.downlink_rate = downlink_rate
         print(f'Capacity: {capacity}')
         self.total_dtos: [DTO] = total_dtos
         self.total_ars: [DTO] = total_ars
+        self.total_dlos: [DLO] = total_dlos
         self.ordered_dtos = sorted(total_dtos, key=lambda dto_: dto_['priority'], reverse=True)
         self.num_generations: int = num_generations
         self.elites: [Chromosome] = []
@@ -39,7 +41,7 @@ class GeneticAlgorithm:
         self.population: [Chromosome] = []
 
         for i in range(num_chromosomes):
-            chromosome = Chromosome(self.capacity, total_ars)
+            chromosome = Chromosome(self.capacity, total_ars, dlos=self.total_dlos, downlink_rate=self.downlink_rate)
             shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
 
             for dto in shuffled_dtos:
@@ -68,7 +70,7 @@ class GeneticAlgorithm:
         sons: [Chromosome] = []
         for parent1, parent2 in self.parents:
             son_dtos = self.crossover_strategy.crossover(parent1, parent2)
-            sons.append(Chromosome(self.capacity, self.total_ars, son_dtos))
+            sons.append(Chromosome(self.capacity, self.total_ars, son_dtos, self.total_dlos, self.downlink_rate))
 
         self.population = self.elites + sons
 
@@ -116,6 +118,8 @@ class GeneticAlgorithm:
             self.parent_selection()
             self.crossover()
             self.mutation()
+            if len(self.total_dlos) > 0:
+                self.update_downloaded_dtos()
             self.repair()
             self.local_search()
             chromosome_fitness = [chromosome.get_tot_fitness() for chromosome in self.population]
@@ -148,3 +152,7 @@ class GeneticAlgorithm:
             plt.plot(np.arange(0, self.num_generations), history[:, i])
         plt.title('Fitness values - Generations')
         plt.show()
+
+    def update_downloaded_dtos(self):
+        for chromosome in self.population:
+            chromosome.update_downloaded_dtos()

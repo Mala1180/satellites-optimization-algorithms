@@ -27,6 +27,22 @@ def overlap(event1, event2):
     return event1['start_time'] <= event2['stop_time'] and event1['stop_time'] >= event2['start_time']
 
 
+def add_dummy_dlo(dtos, dlos):
+    """
+    Adds the dummy variable for some next constraints
+
+    :param dtos: list of dtos
+    :param dlos: list of dlos
+    :return: dlos with dummy dlo added
+    """
+    stop_time = max(dtos[len(dtos) - 1]['stop_time'], dlos[len(dlos) - 1]['stop_time'])
+    dummy_dlo = dlos[len(dlos) - 1].copy()
+    dummy_dlo['start_time'] = stop_time + 1
+    dummy_dlo['stop_time'] = dummy_dlo['start_time']
+    dlos.append(dummy_dlo)
+    return dlos
+
+
 def binary_search(dto, plan) -> int:
     """ Iterative implementation of binary search.
         Returns index of dto in the given chromosome, -1 if not found """

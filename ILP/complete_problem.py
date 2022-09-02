@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from gurobipy import GRB
 
-from utils.functions import overlap, load_instance
+from utils.functions import overlap, load_instance, add_dummy_dlo
 
-INSTANCE = 'test_large'
+INSTANCE = 'day1_40'
 dtos, ars, constants, paws, dlos = load_instance(INSTANCE)
 
 initial_dlos = dlos
@@ -28,11 +28,7 @@ dtos = filtered_dtos
 dlos = sorted(dlos, key=lambda dlo_: dlo_['start_time'])
 
 # add the dummy variable for some next constraints
-stop_time = max(dtos[len(dtos) - 1]['stop_time'], dlos[len(dlos) - 1]['stop_time'])
-dummy_dlo = dlos[len(dlos) - 1].copy()
-dummy_dlo['start_time'] = stop_time + 1
-dummy_dlo['stop_time'] = dummy_dlo['start_time']
-dlos.append(dummy_dlo)
+dlos = add_dummy_dlo(dtos, dlos)
 
 CAPACITY = constants['MEMORY_CAP']
 DOWNLINK_RATE = constants['DOWNLINK_RATE']
