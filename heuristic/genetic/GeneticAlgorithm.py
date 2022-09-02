@@ -16,14 +16,14 @@ from .parent_selection import RouletteWheelSelection
 class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
-    def __init__(self, capacity, total_dtos, total_ars, num_generations=300, num_chromosomes=30,
-                 crossover_strategy='time'):
+    def __init__(self, capacity, total_dtos, total_ars, num_generations=150, num_chromosomes=30,
+                 crossover_strategy='time_feasible'):
         """ Creates a random initial population and prepares data for the algorithm """
         if crossover_strategy == 'single':
             self.crossover_strategy = SinglePointCrossover()
         elif crossover_strategy == 'multi':
             self.crossover_strategy = MultiPointCrossover()
-        elif crossover_strategy == 'time':
+        elif crossover_strategy == 'time_feasible':
             self.crossover_strategy = TimeFeasibleCrossover()
         else:
             raise ValueError(f'Invalid crossover strategy: {crossover_strategy}, choose from "single" or "multi"')
