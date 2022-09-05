@@ -30,9 +30,12 @@ class GeneticAlgorithm:
         self.capacity = capacity
         self.downlink_rate = downlink_rate
         print(f'Capacity: {capacity}')
-        self.total_dtos: [DTO] = total_dtos
-        self.total_ars: [DTO] = total_ars
-        self.total_dlos: [DLO] = total_dlos
+        self.total_dtos: [DTO] = total_dtos.copy()
+        self.total_ars: [DTO] = total_ars.copy()
+        self.total_dlos: [DLO] = []
+        if total_dlos is not None:
+            self.total_dlos = total_dlos.copy()
+
         self.ordered_dtos = sorted(total_dtos, key=lambda dto_: dto_['priority'], reverse=True)
         self.num_generations: int = num_generations
         self.elites: [Chromosome] = []
@@ -41,14 +44,18 @@ class GeneticAlgorithm:
         self.population: [Chromosome] = []
 
         for i in range(num_chromosomes):
-            chromosome = Chromosome(self.capacity, total_ars, dlos=self.total_dlos, downlink_rate=self.downlink_rate)
+            chromosome = Chromosome(self.capacity, total_ars.copy(), tot_dlos=self.total_dlos.copy(),
+                                    downlink_rate=self.downlink_rate)
             shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
 
             for dto in shuffled_dtos:
                 if chromosome.size() == 0 or chromosome.keeps_feasibility(dto):
                     chromosome.add_dto(dto)
 
+            print(f'Chromosome {i} LEN: {chromosome.size()}')
             self.population.append(chromosome)
+
+        print(f'RIFERIMENTO???? {self.population[0].dlos[0]["downloaded_dtos"] is self.population[1].dlos[0]["downloaded_dtos"]}')
 
     def elitism(self):
         """ Updates the elites for the current generation """
@@ -70,7 +77,8 @@ class GeneticAlgorithm:
         sons: [Chromosome] = []
         for parent1, parent2 in self.parents:
             son_dtos = self.crossover_strategy.crossover(parent1, parent2)
-            sons.append(Chromosome(self.capacity, self.total_ars, son_dtos, self.total_dlos, self.downlink_rate))
+            sons.append(Chromosome(self.capacity, self.total_ars.copy(), son_dtos.copy(),
+                                   self.total_dlos.copy(), self.downlink_rate))
 
         self.population = self.elites + sons
 
@@ -113,6 +121,8 @@ class GeneticAlgorithm:
     def run(self):
         """ Starts the algorithm itself """
         for i in range(self.num_generations):
+            if len(self.total_dlos) > 0:
+                self.reset_downloaded_dtos()
             print(f'Generation {i + 1}')
             self.elitism()
             self.parent_selection()
@@ -126,6 +136,16 @@ class GeneticAlgorithm:
             self.fitness_history.append(chromosome_fitness)
             print(f'Fitness: {self.fitness_history[i]}')
 
+    def update_downloaded_dtos(self):
+        for chromosome in self.population:
+            # print('Tutti vuoti?', all([dlo['downloaded_dtos'] == [] for dlo in chromosome.dlos]))
+            chromosome.update_downloaded_dtos()
+
+    def reset_downloaded_dtos(self):
+        for chromosome in self.population:
+            for dlo in chromosome.dlos:
+                dlo['downloaded_dtos'].clear()
+
     def get_best_solution(self) -> Chromosome:
         """ Returns the best solution in the population after running of the algorithm """
         return max(self.population, key=lambda chromosome: chromosome.get_tot_fitness())
@@ -137,7 +157,7 @@ class GeneticAlgorithm:
             print(f'   Len: {len(chromosome.dtos)}, ({chromosome.dtos},')
             print(f'    - Memory occupied: {chromosome.get_tot_memory()},')
             print(f'    - Total priority: {chromosome.get_tot_fitness()}')
-            print(f'    - Feasibility: [MEMORY: {chromosome.is_feasible(Constraint.MEMORY)},'
+            print(f'    - Feasible: [MEMORY: {chromosome.is_feasible(Constraint.MEMORY)},'
                   f' OVERLAP: {chromosome.is_feasible(Constraint.OVERLAP)},'
                   f' SINGLE_SATISFACTION: {chromosome.is_feasible(Constraint.SINGLE_SATISFACTION)},'
                   f' DUPLICATES: {chromosome.is_feasible(Constraint.DUPLICATES)}])')
@@ -152,7 +172,3 @@ class GeneticAlgorithm:
             plt.plot(np.arange(0, self.num_generations), history[:, i])
         plt.title('Fitness values - Generations')
         plt.show()
-
-    def update_downloaded_dtos(self):
-        for chromosome in self.population:
-            chromosome.update_downloaded_dtos()

@@ -14,21 +14,28 @@ class Chromosome:
     """ A class that represents a possible solution of GeneticAlgorithm class """
 
     def __init__(self, capacity: float, ars: [AR], dtos: [DTO] = None,
-                 dlos: [DLO] = None, downlink_rate: float = None) -> None:
+                 tot_dlos: [DLO] = None, downlink_rate: float = None) -> None:
         """ If no argument is given, creates an empty solution, otherwise creates a solution with given DTOs """
         if dtos is None:
             dtos = []
-        if dlos is None:
-            dlos = []
+        if tot_dlos is None:
+            tot_dlos = []
         # Loads DTOs
-        self.dtos: [DTO] = sorted(dtos, key=lambda dto_: dto_['start_time'])
+        self.dtos: [DTO] = []
+        for dto in dtos:
+            self.dtos.append(dto)
+        self.dtos = sorted(self.dtos, key=lambda dto_: dto_['start_time'])
         # Loads ARs
-        self.ars: [AR] = ars
+        self.ars: [AR] = [ar for ar in ars]
         self.ar_ids: [int] = list(map(lambda ar: ar['id'], self.ars))
         # Loads DLOs
-        self.dlos = sorted(dlos, key=lambda dlo_: dlo_['start_time'])
-        for dlo in self.dlos:
+        self.dlos: [DLO] = []
+        for j in range(len(tot_dlos)):
+            dlo = tot_dlos[j].copy()
             dlo['downloaded_dtos'] = []
+            self.dlos.append(dlo)
+
+        self.dlos = sorted(self.dlos, key=lambda dlo_: dlo_['start_time'])
 
         if len(self.dtos) == 0:
             self.ars_served: ndarray = np.full(len(ars), False)
@@ -59,8 +66,7 @@ class Chromosome:
         else:
             index = binary_search(dto, self.dtos)
             if index != -1:
-                pass
-                # return False
+                return False
             else:
                 index = find_insertion_point(dto, self.dtos)
 
@@ -98,7 +104,6 @@ class Chromosome:
         self.tot_memory -= dto['memory']
         self.fitness -= dto['priority']
         self.ars_served[dto['ar_index']] = False
-        # self.dto_ids = np.delete(self.dto_ids, np.where(self.dto_ids == dto['id']))
 
     def get_memories(self) -> [float]:
         """ Returns the memory costs of each DTO in the solution """
@@ -206,14 +211,20 @@ class Chromosome:
         """ Returns true if the given DTO is downloaded in the solution """
         for dlo in self.dlos:
             index = binary_search(dto, dlo['downloaded_dtos'])
+            # try:
+            #     index1 = dlo['downloaded_dtos'].index(dto)
+            # except ValueError:
+            #     index1 = -1
+            # print(f'index:{index}, index1:{index1}, uguali? {index == index1}')
             if index != -1:
                 return True
         return False
 
     def is_dto_downloadable(self, dto: DTO, dlo: DLO) -> bool:
         """ Returns true if the given DTO is downloaded in the solution """
-        return sum(dto['memory'] for dto in dlo['downloaded_dtos']) + dto['memory'] <= \
-            self.downlink_rate * (dlo['stop_time'] - dlo['start_time']) and \
+        memory_downloaded = sum(dto['memory'] for dto in dlo['downloaded_dtos']) + dto['memory']
+
+        return memory_downloaded <= self.downlink_rate * (dlo['stop_time'] - dlo['start_time']) and \
             dto['stop_time'] < dlo['start_time'] and \
             not self.is_dto_downloaded(dto)
 
@@ -284,15 +295,19 @@ class Chromosome:
                f'\nDTOs taken: {self.dtos[:5]}...,\nARs served: {self.ars_served[:5]}...'
 
     def update_downloaded_dtos(self):
-        pass
-        # shuffled_dtos: [DTO] = sample(self.dtos, len(self.dtos))
-        # print(f'Duplicates? {len(shuffled_dtos) != len(list(set(shuffled_dtos)))}')
-        # for dlo in self.dlos:
-        #     for dto in shuffled_dtos:
-        #         if self.is_dto_downloadable(dto, dlo):
-        #             dlo['downloaded_dtos'].append(dto)
-        #
-        #     for dto in dlo['downloaded_dtos']:
-        #         print(list(map(lambda x: x['id'], shuffled_dtos)))
-        #         print(dto['id'])
-        #         shuffled_dtos.remove(dto)
+        # print('Tutti vuoti?', all([len(dlo['downloaded_dtos']) == 0 for dlo in self.dlos]))
+        shuffled_dtos: [DTO] = sample(self.dtos.copy(), len(self.dtos))
+        for dlo in self.dlos:
+
+            for dto in shuffled_dtos:
+                if self.is_dto_downloadable(dto, dlo):
+                    # print(f"{dto['id']}, GIA scaricata? {dto['downloaded']}")
+                    dlo['downloaded_dtos'].append(dto.copy())
+                    # shuffled_dtos.remove(dto)
+
+            # for dto in dlo['downloaded_dtos']:
+            #     print(list(map(lambda x: x['id'], shuffled_dtos)))
+            #     print(f"{dto['id']}, scaricata? {dto['downloaded']}")
+            #     shuffled_dtos.remove(dto)
+
+            # print("FINEEE DLOOOOOOOOOO")
