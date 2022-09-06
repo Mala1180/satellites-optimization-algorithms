@@ -52,10 +52,7 @@ class GeneticAlgorithm:
                 if chromosome.size() == 0 or chromosome.keeps_feasibility(dto):
                     chromosome.add_dto(dto)
 
-            print(f'Chromosome {i} LEN: {chromosome.size()}')
             self.population.append(chromosome)
-
-        print(f'RIFERIMENTO???? {self.population[0].dlos[0]["downloaded_dtos"] is self.population[1].dlos[0]["downloaded_dtos"]}')
 
     def elitism(self):
         """ Updates the elites for the current generation """
@@ -138,7 +135,6 @@ class GeneticAlgorithm:
 
     def update_downloaded_dtos(self):
         for chromosome in self.population:
-            # print('Tutti vuoti?', all([dlo['downloaded_dtos'] == [] for dlo in chromosome.dlos]))
             chromosome.update_downloaded_dtos()
 
     def reset_downloaded_dtos(self):

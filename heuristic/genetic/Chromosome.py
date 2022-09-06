@@ -25,6 +25,8 @@ class Chromosome:
         for dto in dtos:
             self.dtos.append(dto)
         self.dtos = sorted(self.dtos, key=lambda dto_: dto_['start_time'])
+        for dto in self.dtos:
+            dto['memory'] = round(dto['memory'], 2)
         # Loads ARs
         self.ars: [AR] = [ar for ar in ars]
         self.ar_ids: [int] = list(map(lambda ar: ar['id'], self.ars))
@@ -71,6 +73,7 @@ class Chromosome:
                 index = find_insertion_point(dto, self.dtos)
 
         self.dtos.insert(index, dto)
+        dto['memory'] = round(dto['memory'], 2)
         self.tot_memory += dto['memory']
         self.fitness += dto['priority']
         self.ars_served[dto['ar_index']] = True
@@ -101,7 +104,7 @@ class Chromosome:
             raise IndexError("Index out of range")
         dto = self.dtos[index]
         self.dtos.pop(index)
-        self.tot_memory -= dto['memory']
+        self.tot_memory -= round(dto['memory'], 2)
         self.fitness -= dto['priority']
         self.ars_served[dto['ar_index']] = False
 
@@ -135,6 +138,14 @@ class Chromosome:
             return self.dtos[-1]
         else:
             return None
+
+    def get_dtos_before_dlo(self, dlo: DLO):
+        """ Returns the DTOs that comes before the given DLO """
+        return [dto for dto in self.dtos if dto['stop_time'] < dlo['start_time']]
+
+    def get_dtos_between_dates(self, start_time: float, stop_time: float):
+        """ Returns the DTOs between the given interval """
+        return [dto for dto in self.dtos if dto['start_time'] > start_time and dto['stop_time'] < stop_time]
 
     def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
@@ -186,13 +197,16 @@ class Chromosome:
                 for dlo in self.dlos:
                     i: int = 0
                     while i < len(dtos_copy) and dlo['start_time'] > dtos_copy[i]['stop_time']:
-                        memory += dtos_copy[i]['memory']
+                        memory = round(memory + dtos_copy[i]['memory'], 2)
                         i += 1
                     dtos_copy = dtos_copy[i:]
                     if memory > self.capacity:
                         return False
                     for dto in dlo['downloaded_dtos']:
-                        memory -= dto['memory']
+                        memory = round(memory - dto['memory'], 2)
+
+                    if memory < 0:
+                        return False
                 return True
 
         elif constraint == Constraint.OVERLAP:
@@ -220,29 +234,41 @@ class Chromosome:
                 return True
         return False
 
-    def is_dto_downloadable(self, dto: DTO, dlo: DLO) -> bool:
+    def is_dto_downloadable(self, dto: DTO, dlo: DLO, current_memory: float) -> bool:
         """ Returns true if the given DTO is downloaded in the solution """
-        memory_downloaded = sum(dto['memory'] for dto in dlo['downloaded_dtos']) + dto['memory']
-
+        memory_downloaded = sum(round(dto['memory'], 2) for dto in dlo['downloaded_dtos']) + dto['memory']
         return memory_downloaded <= self.downlink_rate * (dlo['stop_time'] - dlo['start_time']) and \
             dto['stop_time'] < dlo['start_time'] and \
+            round(current_memory - dto['memory'], 2) >= 0 and \
             not self.is_dto_downloaded(dto)
 
     def repair_memory(self):
         """ Repairs the memory constraint of the solution """
-        # if len(self.dlos) == 0: # if problem is relaxed
-        while not self.is_feasible(Constraint.MEMORY):
-            index = np.random.randint(self.size())
-            self.remove_dto_at(index)
-        # else:  # if problem includes down-links
-        #     for dlo in self.dlos:
-        #         memory: float = 0
-        #         current_index: int = 0
-        #         while current_index < len(self.dtos) and dlo['start_time'] > self.dtos[current_index]['stop_time']:
-        #             memory += self.dtos[current_index]['memory']
-        #             current_index += 1
-        #         if memory > self.capacity:
-        #             return False
+        if len(self.dlos) == 0:  # if problem is relaxed
+            while not self.is_feasible(Constraint.MEMORY):
+                index = np.random.randint(self.size())
+                self.remove_dto_at(index)
+        else:  # if problem includes down-links
+            dtos_copy = self.dtos.copy()
+            memory: float = 0
+            for dlo in self.dlos:
+                i: int = 0
+                start_index = i
+                while i < len(dtos_copy) and dlo['start_time'] > dtos_copy[i]['stop_time']:
+                    memory = round(memory + dtos_copy[i]['memory'], 2)
+                    i += 1
+                while memory > self.capacity:
+                    index = np.random.randint(start_index, i)
+                    memory = round(memory - dtos_copy[index]['memory'], 2)
+                    if dtos_copy[index] in dlo['downloaded_dtos']:
+                        dlo['downloaded_dtos'].remove(dtos_copy[index])
+                    self.remove_dto(dtos_copy[index])
+                    dtos_copy.pop(index)
+                    i -= 1
+                for dto in dlo['downloaded_dtos']:
+                    memory = round(memory - dto['memory'], 2)
+
+                dtos_copy = dtos_copy[i:]
 
     def repair_overlap(self):
         """ Repairs the overlap constraint of the solution """
@@ -275,39 +301,55 @@ class Chromosome:
         """ Plots the memory of the solution """
         activities = self.dtos + self.dlos
         activities = sorted(activities, key=lambda activity_: activity_['start_time'])
-        memories = []
+        memories = [0]
         current_memory: float = 0
         for activity in activities:
             if 'ar_id' in activity:
-                current_memory += activity['memory']
+                current_memory = round(current_memory + activity['memory'], 2)
             else:
                 for dto in activity['downloaded_dtos']:
-                    current_memory -= dto['memory']
+                    current_memory = round(current_memory - dto['memory'], 2)
             memories.append(current_memory)
 
-        x = np.arange(len(activities))
+        x = np.arange(len(activities) + 1)
         plt.plot(x, memories, 'r-')
         plt.title('Memory')
         plt.show()
 
+    def update_downloaded_dtos(self):
+        memory: float = 0
+        downloaded_dtos: [DTO] = []
+        for j, dlo in enumerate(self.dlos):
+            if j == 0:
+                dtos_between_dlos: [DTO] = self.get_dtos_between_dates(0, dlo['start_time'])
+            else:
+                dtos_between_dlos: [DTO] = self.get_dtos_between_dates(self.dlos[j - 1]['stop_time'], dlo['start_time'])
+
+            memory = round(memory + round(sum(list(map(lambda dto: dto['memory'], dtos_between_dlos))), 2), 2)
+
+            downloadable_dtos: [DTO] = [dto for dto in self.get_dtos_before_dlo(dlo)
+                                        if dto not in downloaded_dtos]
+            # print(sum(dto['memory'] for dto in downloadable_dtos))
+            # print(memory)
+            downloadable_dtos = sample(downloadable_dtos, len(downloadable_dtos))
+            for dto in downloadable_dtos:
+                if round(memory - dto['memory'], 2) < 0:
+                    print("here")
+                if self.is_dto_downloadable(dto, dlo, memory):
+                    dlo['downloaded_dtos'].append(dto.copy())
+                    memory = round(memory - dto['memory'], 2)
+                    downloadable_dtos.remove(dto)
+
+            downloaded_dtos.extend(dlo['downloaded_dtos'].copy())
+            # print(memory)
+
+    # self.plot_memory()
+
+    # if not self.is_constraint_respected(Constraint.MEMORY):
+    #     # self.plot_memory()
+    #     print('Memory constraint not respected')
+    #     print(self.is_constraint_respected(Constraint.MEMORY))
+
     def __str__(self) -> str:
         return f'Fitness: {self.fitness},\nFeasible: {self.is_feasible()},\nMemory occupied: {self.tot_memory},' \
                f'\nDTOs taken: {self.dtos[:5]}...,\nARs served: {self.ars_served[:5]}...'
-
-    def update_downloaded_dtos(self):
-        # print('Tutti vuoti?', all([len(dlo['downloaded_dtos']) == 0 for dlo in self.dlos]))
-        shuffled_dtos: [DTO] = sample(self.dtos.copy(), len(self.dtos))
-        for dlo in self.dlos:
-
-            for dto in shuffled_dtos:
-                if self.is_dto_downloadable(dto, dlo):
-                    # print(f"{dto['id']}, GIA scaricata? {dto['downloaded']}")
-                    dlo['downloaded_dtos'].append(dto.copy())
-                    # shuffled_dtos.remove(dto)
-
-            # for dto in dlo['downloaded_dtos']:
-            #     print(list(map(lambda x: x['id'], shuffled_dtos)))
-            #     print(f"{dto['id']}, scaricata? {dto['downloaded']}")
-            #     shuffled_dtos.remove(dto)
-
-            # print("FINEEE DLOOOOOOOOOO")
