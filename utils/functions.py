@@ -56,7 +56,7 @@ def binary_search(dto, plan) -> int:
             return mid
 
         # If element is smaller than mid, then it can only be present in left sub-array
-        elif dto['start_time'] > plan[mid]['start_time']:
+        if dto['start_time'] > plan[mid]['start_time']:
             low = mid + 1
 
         # Else the element can only be present in right sub-array
@@ -69,6 +69,11 @@ def binary_search(dto, plan) -> int:
 
 def find_insertion_point(dto, plan) -> int:
     """ Finds the insertion index for a dto in the plan """
+    if len(plan) == 0 or dto['start_time'] <= plan[0]['start_time']:
+        return 0
+    if dto['start_time'] >= plan[-1]['start_time']:
+        return len(plan)
+
     low = 0
     high = len(plan) - 1
     while high >= low:
@@ -77,7 +82,7 @@ def find_insertion_point(dto, plan) -> int:
         if plan[mid]['start_time'] <= dto['start_time'] <= plan[mid + 1]['start_time']:
             return mid + 1
 
-        elif dto['start_time'] > plan[mid]['start_time']:
+        if dto['start_time'] > plan[mid]['start_time']:
             low = mid + 1
         else:
             high = mid - 1

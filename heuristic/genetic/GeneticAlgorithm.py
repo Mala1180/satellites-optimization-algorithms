@@ -31,6 +31,8 @@ class GeneticAlgorithm:
         self.downlink_rate = downlink_rate
         print(f'Capacity: {capacity}')
         self.total_dtos: [DTO] = total_dtos.copy()
+        for dto in self.total_dtos:
+            dto['memory'] = round(dto['memory'], 2)
         self.total_ars: [DTO] = total_ars.copy()
         self.total_dlos: [DLO] = []
         if total_dlos is not None:
@@ -74,8 +76,11 @@ class GeneticAlgorithm:
         sons: [Chromosome] = []
         for parent1, parent2 in self.parents:
             son_dtos = self.crossover_strategy.crossover(parent1, parent2)
-            sons.append(Chromosome(self.capacity, self.total_ars.copy(), son_dtos.copy(),
-                                   self.total_dlos.copy(), self.downlink_rate))
+            son = Chromosome(self.capacity, self.total_ars.copy(), son_dtos.copy(),
+                             self.total_dlos.copy(), self.downlink_rate)
+            sons.append(son)
+            if not son.is_constraint_respected(Constraint.DUPLICATES):
+                raise Exception('The solution contains duplicates - crossover')
 
         self.population = self.elites + sons
 
@@ -96,6 +101,9 @@ class GeneticAlgorithm:
                 # chromosome.remove_dto_at(np.random.randint(0, len(chromosome.dtos)))
                 chromosome.add_dto(new_dto)
 
+            if not chromosome.is_constraint_respected(Constraint.DUPLICATES):
+                raise Exception('The solution contains duplicates - mutation')
+
     def repair(self):
         """ Repairs the population if some chromosomes are not feasible """
         for chromosome in self.population:
@@ -103,10 +111,11 @@ class GeneticAlgorithm:
                 chromosome.repair_overlap()
             if not chromosome.is_feasible(Constraint.SINGLE_SATISFACTION):
                 chromosome.repair_satisfaction()
-            if not chromosome.is_feasible(Constraint.MEMORY):
-                chromosome.repair_memory()
             if not chromosome.is_feasible(Constraint.DUPLICATES):
                 chromosome.repair_duplicates()
+            if not chromosome.is_feasible(Constraint.MEMORY):
+                while not chromosome.repair_memory():
+                    chromosome.update_downloaded_dtos()
 
     def local_search(self):
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
@@ -118,8 +127,6 @@ class GeneticAlgorithm:
     def run(self):
         """ Starts the algorithm itself """
         for i in range(self.num_generations):
-            if len(self.total_dlos) > 0:
-                self.reset_downloaded_dtos()
             print(f'Generation {i + 1}')
             self.elitism()
             self.parent_selection()
@@ -136,11 +143,6 @@ class GeneticAlgorithm:
     def update_downloaded_dtos(self):
         for chromosome in self.population:
             chromosome.update_downloaded_dtos()
-
-    def reset_downloaded_dtos(self):
-        for chromosome in self.population:
-            for dlo in chromosome.dlos:
-                dlo['downloaded_dtos'].clear()
 
     def get_best_solution(self) -> Chromosome:
         """ Returns the best solution in the population after running of the algorithm """
