@@ -125,8 +125,76 @@ class Chromosome:
             if overlap(dto, dto_):
                 return False
 
+        for dlo in self.dlos:
+            if len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
+                    set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
+                raise Exception("There are repeated DTOs in a DLO")
 
-        return False
+        dtos_copy_2 = self.dtos.copy()
+        dtos_copy = self.dtos.copy()
+        dlos_copy = self.dlos.copy()
+
+        memory: float = 0
+        added, downloaded, dlo_downloading_index = False, False, None
+        for j, dlo in enumerate(dlos_copy):
+            i: int = 0
+            while i < len(dtos_copy) and dlo['start_time'] > dtos_copy[i]['stop_time']:
+                print(f'{memory} + {dtos_copy[i]["memory"]}')
+                memory = round(memory + dtos_copy[i]['memory'], 2)
+                i += 1
+
+            if not added and round(memory + dto['memory'], 2) <= self.capacity:
+                # index = find_insertion_point(dto, dtos_copy[:1])
+                # dtos_copy_2.insert(index, dto.copy())
+                # i += 1
+                print(f'{memory} + {dto["memory"]}')
+                memory = round(memory + dto['memory'], 2)
+                memory_saved = dto['memory']
+                dto_saved = dto
+                # print("DTO ADDED")
+                added = True
+
+            memory_downloaded: float = 0
+
+            for dlo_ in self.dlos:
+                if len(list(map(lambda dto__: dto__['id'], dlo_['downloaded_dtos']))) != len(
+                        set(list(map(lambda dto__: dto__['id'], dlo_['downloaded_dtos'])))):
+                    raise Exception("There are repeated DTOs in a DLO")
+            for dto_ in dlo['downloaded_dtos']:
+                print(f'{memory} - {dto_["memory"]}')
+                memory = round(memory - dto_['memory'], 2)
+                memory_downloaded = round(memory_downloaded + dto_['memory'], 2)
+
+            if added \
+                    and not downloaded \
+                    and dto['stop_time'] < dlo['start_time'] \
+                    and self.is_dto_downloadable(dto, dlo, memory_downloaded):
+                # dlo['downloaded_dtos'].append(dto)
+                print(f'{memory} - {dto["memory"]}')
+                memory = round(memory - dto['memory'], 2)
+                # print("DTO DOWLOADED")
+                # print(memory_saved, dto['memory'])
+                # print(dto_saved == dto)
+                if memory < 0:
+                    print(
+                        f"Duplicated ? {len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))))}")
+                    print(list(map(lambda dto__: (dto__['id'], dto__['memory']), dtos_copy_2)))
+                    print(f'Memory is negative: {memory}')
+                    print("Error at dlo index: ", j)
+                    raise Exception('Memory is negative')
+                downloaded = True
+                dlo_downloading_index = j
+
+            if added and downloaded:
+                break
+            dtos_copy = dtos_copy[i:]
+
+        if added and downloaded:
+            self.add_dto(dto)
+            self.dlos[dlo_downloading_index]['downloaded_dtos'].append(dto)
+            return True
+        else:
+            return False
 
     def remove_dto(self, dto: DTO) -> bool:
         """ Removes a DTO from the solution """
@@ -153,8 +221,8 @@ class Chromosome:
 
     def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
-        if len(self.dtos) > 0:
-            raise Exception("This method works only with relaxed problems")
+        # if len(self.dtos) > 0:
+        #     raise Exception("This method works only with relaxed problems")
 
         # Checks if the DTO would exceed the memory limit
         if self.get_tot_memory() + dto['memory'] > self.capacity:
@@ -200,7 +268,7 @@ class Chromosome:
             else:  # if problem includes down-links
                 dtos_copy = self.dtos.copy()
                 memory: float = 0
-                for dlo in self.dlos:
+                for dlo in self.dlos.copy():
                     i: int = 0
                     while i < len(dtos_copy) and dlo['start_time'] > dtos_copy[i]['stop_time']:
                         memory = round(memory + dtos_copy[i]['memory'], 2)
@@ -273,6 +341,7 @@ class Chromosome:
                     memory = round(memory - dto['memory'], 2)
 
                 dtos_copy = dtos_copy[i:]
+
             return True
 
     def repair_overlap(self):
