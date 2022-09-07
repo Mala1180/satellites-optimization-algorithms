@@ -58,42 +58,6 @@ class Chromosome:
         """ Returns the length of dto list """
         return len(self.dtos)
 
-    def add_dto(self, dto: DTO) -> bool:
-        """ Adds a DTO to the solution in start time order, updates total memory, fitness and ARs served.
-            Returns True if the insertion """
-        if self.ars_served[dto['ar_index']]:
-            return False
-
-        index = find_insertion_point(dto, self.dtos)
-        self.dtos.insert(index, dto)
-        self.tot_memory += dto['memory']
-        self.fitness += dto['priority']
-        self.ars_served[dto['ar_index']] = True
-        return True
-
-    def remove_dto(self, dto: DTO) -> bool:
-        """ Removes a DTO from the solution """
-        index = binary_search(dto, self.dtos)
-        if index == -1:
-            return False
-        # if len(self.dlos) > 0:
-        #     for dlo in self.dlos:
-        #         index = binary_search(dto, dlo['downloaded_dtos'])
-        #         if index != -1:
-        #             dlo['downloaded_dtos'].pop(index)
-        return self.remove_dto_at(index)
-
-    def remove_dto_at(self, index: int):
-        """ Removes the DTO at the given index, raises an exception if the index is out of bounds """
-        if index < 0 or index >= len(self.dtos):
-            print(f'Index:{index}, len(self.dtos):{len(self.dtos)}')
-            raise IndexError("Index out of range")
-        dto = self.dtos[index]
-        self.dtos.pop(index)
-        self.tot_memory -= round(dto['memory'], 2)
-        self.fitness -= dto['priority']
-        self.ars_served[dto['ar_index']] = False
-
     def get_memories(self) -> [float]:
         """ Returns the memory costs of each DTO in the solution """
         return list(map(lambda dto_: dto_['memory'], self.dtos))
@@ -133,8 +97,65 @@ class Chromosome:
         """ Returns the DTOs between the given interval """
         return [dto for dto in self.dtos if dto['start_time'] > start_time and dto['stop_time'] < stop_time]
 
+    def add_dto(self, dto: DTO) -> bool:
+        """ Adds a DTO to the solution in start time order, updates total memory, fitness and ARs served.
+            Returns True if the insertion """
+        if self.ars_served[dto['ar_index']]:
+            return False
+
+        index = find_insertion_point(dto, self.dtos)
+        self.dtos.insert(index, dto)
+        self.tot_memory += dto['memory']
+        self.fitness += dto['priority']
+        self.ars_served[dto['ar_index']] = True
+        return True
+
+    def add_and_download_dto(self, dto: DTO) -> bool:
+        """ Adds a DTO to the solution and downloads it, returns True if the insertion and download were successful """
+        if len(self.dlos) == 0:
+            raise Exception("This method works only with downlink problems")
+
+        # Checks if AR of the DTO is already served, and if DTO is already in the plan
+        if self.ars_served[dto['ar_index']]:
+            return False
+
+        # Checks if the DTO would overlap with another DTO
+        # TODO: it can be optimized by using find_insertion_point
+        for dto_ in self.dtos:
+            if overlap(dto, dto_):
+                return False
+
+
+        return False
+
+    def remove_dto(self, dto: DTO) -> bool:
+        """ Removes a DTO from the solution """
+        index = binary_search(dto, self.dtos)
+        if index == -1:
+            return False
+        # if len(self.dlos) > 0:
+        #     for dlo in self.dlos:
+        #         index = binary_search(dto, dlo['downloaded_dtos'])
+        #         if index != -1:
+        #             dlo['downloaded_dtos'].pop(index)
+        return self.remove_dto_at(index)
+
+    def remove_dto_at(self, index: int):
+        """ Removes the DTO at the given index, raises an exception if the index is out of bounds """
+        if index < 0 or index >= len(self.dtos):
+            print(f'Index:{index}, len(self.dtos):{len(self.dtos)}')
+            raise IndexError("Index out of range")
+        dto = self.dtos[index]
+        self.dtos.pop(index)
+        self.tot_memory -= round(dto['memory'], 2)
+        self.fitness -= dto['priority']
+        self.ars_served[dto['ar_index']] = False
+
     def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
+        if len(self.dtos) > 0:
+            raise Exception("This method works only with relaxed problems")
+
         # Checks if the DTO would exceed the memory limit
         if self.get_tot_memory() + dto['memory'] > self.capacity:
             return False
@@ -144,6 +165,7 @@ class Chromosome:
             return False
 
         # Checks if the DTO would overlap with another DTO
+        # TODO: it can be optimized by using find_insertion_point
         for dto_ in self.dtos:
             if overlap(dto, dto_):
                 return False
@@ -281,7 +303,7 @@ class Chromosome:
             self.remove_dto_at(index)
 
     def plot_memory(self):
-        """ Plots the memory of the solution """
+        """ Shows the memory trend of the solution on a graph """
         activities = self.dtos + self.dlos
         activities = sorted(activities, key=lambda activity_: activity_['start_time'])
         memories = [0]
@@ -317,9 +339,11 @@ class Chromosome:
 
             memory = round(memory + round(sum(list(map(lambda dto_: dto_['memory'], dtos_between_dlos))), 2), 2)
             downloadable_dtos += dtos_between_dlos
-            downloadable_dtos = sorted(downloadable_dtos, key=lambda dto_: dto_['memory'], reverse=True)
+            downloadable_dtos.sort(key=lambda dto_: dto_['memory'], reverse=True)
             memory_downloaded: float = 0
-            for dto in downloadable_dtos:
+            i: int = 0
+            while i < len(downloadable_dtos):
+                dto = downloadable_dtos[i]
                 if self.is_dto_downloaded(dto):
                     raise Exception('The DTO is already downloaded')
 
@@ -330,6 +354,8 @@ class Chromosome:
                         raise Exception('Memory is negative')
                     memory_downloaded += dto['memory']
                     downloadable_dtos.remove(dto)
+                    i -= 1
+                i += 1
 
     def __str__(self) -> str:
         return f'Fitness: {self.fitness},\nFeasible: {self.is_feasible()},\nMemory occupied: {self.tot_memory},' \

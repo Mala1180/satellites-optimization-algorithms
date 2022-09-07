@@ -17,7 +17,7 @@ class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
     def __init__(self, capacity, total_dtos, total_ars, total_dlos=None, downlink_rate=None,
-                 num_generations=150, num_chromosomes=30, crossover_strategy='time_feasible'):
+                 num_generations=150, num_chromosomes=30, num_elites=3, crossover_strategy='time_feasible'):
         """ Creates a random initial population and prepares data for the algorithm """
         if crossover_strategy == 'single':
             self.crossover_strategy = SinglePointCrossover()
@@ -29,6 +29,7 @@ class GeneticAlgorithm:
             raise ValueError(f'Invalid crossover strategy: {crossover_strategy}, choose from "single" or "multi"')
         self.capacity = capacity
         self.downlink_rate = downlink_rate
+        self.num_elites = num_elites
         print(f'Capacity: {capacity}')
         self.total_dtos: [DTO] = total_dtos.copy()
         for dto in self.total_dtos:
@@ -58,10 +59,11 @@ class GeneticAlgorithm:
 
     def elitism(self):
         """ Updates the elites for the current generation """
-        self.elites = sorted(self.population, key=lambda chromosome: chromosome.get_tot_fitness(), reverse=True)[:3]
-        # self.elite = max(self.population, key=lambda chromosome: chromosome.get_tot_fitness())
+        self.elites = sorted(self.population,
+                             key=lambda chromosome: chromosome.get_tot_fitness(),
+                             reverse=True)[: self.num_elites]
 
-    def parent_selection(self) -> [Chromosome]:
+    def parent_selection(self):
         """ Chooses and returns the chromosomes to make crossover with roulette wheel selection method """
         self.parents = []
         parent_selection_strategy = RouletteWheelSelection(self.population)
@@ -80,19 +82,13 @@ class GeneticAlgorithm:
                              self.total_dlos.copy(), self.downlink_rate)
             sons.append(son)
             if not son.is_constraint_respected(Constraint.DUPLICATES):
-                raise Exception('The solution contains duplicates - crossover')
+                raise Exception('The solution contains duplicates')
 
         self.population = self.elites + sons
 
     def mutation(self):
         """ Mutates randomly the 10% of each chromosome in the population """
         for chromosome in list(set(self.population) - set(self.elites)):
-            # Inserts 10 random DTOs in the plan
-            # for _ in range(10):
-            #     new_dto = choice(self.total_dtos)
-            #     # chromosome.remove_dto_at(np.random.randint(0, len(chromosome.dtos)))
-            #     chromosome.add_dto(new_dto)
-
             # Replaces 10% of DTOs in the plan with new random DTOs
             for _ in range(len(chromosome.dtos) // 10):
                 new_dto = choice(self.total_dtos)
@@ -102,7 +98,7 @@ class GeneticAlgorithm:
                 chromosome.add_dto(new_dto)
 
             if not chromosome.is_constraint_respected(Constraint.DUPLICATES):
-                raise Exception('The solution contains duplicates - mutation')
+                raise Exception('The solution contains duplicates')
 
     def repair(self):
         """ Repairs the population if some chromosomes are not feasible """
@@ -121,8 +117,13 @@ class GeneticAlgorithm:
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
         for chromosome in self.population:
             for dto in self.ordered_dtos:
-                if chromosome.keeps_feasibility(dto):
-                    chromosome.add_dto(dto)
+                if len(self.total_dlos) == 0:
+                    if chromosome.keeps_feasibility(dto):
+                        chromosome.add_dto(dto)
+                else:
+                    pass
+
+            # chromosome.update_downloaded_dtos()
 
     def run(self):
         """ Starts the algorithm itself """

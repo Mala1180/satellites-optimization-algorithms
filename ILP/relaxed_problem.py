@@ -61,14 +61,17 @@ for i1, dto1 in enumerate(dtos):
 
 # add the single satisfaction constraints
 for ar_id in grouped_dtos.keys():
-    model.addConstr(gp.quicksum([dtos_variables[dtos.index(dto_)] for dto_ in grouped_dtos[ar_id]]) <= 1,
+    model.addConstr(gp.quicksum([dtos_variables[dtos.index(dto_)]
+                                 for dto_ in grouped_dtos[ar_id]]) <= 1,
                     f"Single satisfaction constraint for {ar_id}")
 
 # add the memory constraint
-model.addConstr(gp.quicksum([memories[i] * dtos_variables[i] for i in range(DTOS_NUMBER)]) <= CAPACITY,
+model.addConstr(gp.quicksum([memories[i] * dtos_variables[i]
+                             for i in range(DTOS_NUMBER)]) <= CAPACITY,
                 "Memory constraint")
 # set objective function to maximize dtos priority
-model.setObjective(gp.quicksum([priorities[i] * dtos_variables[i] for i in range(DTOS_NUMBER)]), GRB.MAXIMIZE)
+model.setObjective(gp.quicksum([priorities[i] * dtos_variables[i]
+                                for i in range(DTOS_NUMBER)]), GRB.MAXIMIZE)
 
 end = time.time()
 print("Preparation terminated in ", end - start)
@@ -80,8 +83,7 @@ start = time.time()
 model.optimize()
 
 if model.Status == GRB.INF_OR_UNBD:
-    # Turn pre-solve off to determine whether model is infeasible
-    # or unbounded
+    # Turn pre-solve off to determine whether model is infeasible or unbounded
     model.setParam(GRB.Param.Presolve, 0)
     model.optimize()
 if model.Status == GRB.OPTIMAL:

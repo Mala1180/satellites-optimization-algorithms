@@ -83,7 +83,6 @@ for i1, dto1 in enumerate(dtos):
     else:
         grouped_dtos[dto1['ar_id']].append(dto1)
 
-
 # add the single satisfaction constraints
 for ar_id in grouped_dtos.keys():
     model.addConstr(gp.quicksum([dtos_variables[dtos.index(dto_)] for dto_ in grouped_dtos[ar_id]]) <= 1,
@@ -95,16 +94,15 @@ satellite_memories = [gp.quicksum([memories[i] * dtos_variables[i] for i, dto in
 model.addConstr(satellite_memories[0] <= CAPACITY, f'Memory_constraint_DLO_0')
 
 for j in range(1, DLOS_NUMBER):
-    satellite_memories.append(satellite_memories[j - 1]
-                              - gp.quicksum([memories[i] * z_ji[j - 1][i] for i in range(DTOS_NUMBER)])
-                              # * dlos_variables[j]
-                              + gp.quicksum([memories[i] * dtos_variables[i] for i, dto in enumerate(dtos)
-                                             if dto['start_time'] > dlos[j - 1]['stop_time']
-                                             and dto['stop_time'] < dlos[j]['start_time']]))
+    satellite_memories.append(
+        satellite_memories[j - 1]
+        - gp.quicksum([memories[i] * z_ji[j - 1][i] for i in range(DTOS_NUMBER)])
+        + gp.quicksum([memories[i] * dtos_variables[i] for i, dto in enumerate(dtos)
+                       if dto['start_time'] > dlos[j - 1]['stop_time']
+                       and dto['stop_time'] < dlos[j]['start_time']])
+    )
 
     model.addConstr(satellite_memories[j] <= CAPACITY, f'Memory_constraint_DLO_{j}')
-
-print()
 
 # # add DTO selected in plan constraint
 # for j in range(DLOS_NUMBER):
@@ -118,7 +116,8 @@ print()
 # last two commented constraints can be reduced to the next one (maybe)
 for i in range(DTOS_NUMBER):
     model.addConstr(gp.quicksum([z_ji[j][i] for j in range(DLOS_NUMBER)]) <= dtos_variables[i],
-                    f'Single_downlink_constraint_and_post_acquisition_for_DTO_{i}')
+                    f'Single_downlink_constraint_'
+                    f'and_post_acquisition_for_DTO_{i}')
 
 # add downloaded memory constraint
 for j in range(DLOS_NUMBER):
@@ -145,8 +144,7 @@ start = time.time()
 model.optimize()
 
 if model.Status == GRB.INF_OR_UNBD:
-    # Turn pre-solve off to determine whether model is infeasible
-    # or unbounded
+    # Turn pre-solve off to determine whether model is infeasible or unbounded
     model.setParam(GRB.Param.Presolve, 0)
     model.optimize()
 if model.Status == GRB.OPTIMAL:
