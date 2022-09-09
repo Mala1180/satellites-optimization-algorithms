@@ -1,5 +1,4 @@
 import collections
-from random import sample
 from typing import Optional
 
 import numpy as np
@@ -21,12 +20,8 @@ class Chromosome:
         if tot_dlos is None:
             tot_dlos = []
         # Loads DTOs
-        self.dtos: [DTO] = []
-        for dto in dtos:
-            self.dtos.append(dto)
+        self.dtos: [DTO] = [dto for dto in dtos]
         self.dtos = sorted(self.dtos, key=lambda dto_: dto_['start_time'])
-        for dto in self.dtos:
-            dto['memory'] = round(dto['memory'], 2)
         # Loads ARs
         self.ars: [AR] = [ar for ar in ars]
         self.ar_ids: [int] = list(map(lambda ar: ar['id'], self.ars))
@@ -42,7 +37,12 @@ class Chromosome:
         if len(self.dtos) == 0:
             self.ars_served: ndarray = np.full(len(ars), False)
         else:
-            self.ars_served: ndarray = np.isin(self.ar_ids, [dto['ar_id'] for dto in self.dtos])
+            self.ars_served: ndarray = np.full(len(ars), False)
+            for dto in self.dtos:
+                self.ars_served[dto['ar_index']] = True
+            # self.ars_served: ndarray = np.isin(self.ar_ids, [dto['ar_id'] for dto in self.dtos])
+
+            # print("HERE ", np.all(self.ars_served_2 == self.ars_served))
 
         self.fitness: float = sum(self.get_priorities())
         self.tot_memory: float = sum(self.get_memories())
@@ -112,6 +112,11 @@ class Chromosome:
 
     def add_and_download_dto(self, dto: DTO) -> bool:
         """ Adds a DTO to the solution and downloads it, returns True if the insertion and download were successful """
+        if len(self.get_ars_served()) > self.ars_served.sum():
+            print("POST ADD AND DOWNLOAD")
+            print("len ar ids ", len(self.get_ars_served()))
+            print("bool array len: ", self.ars_served.sum())
+
         if len(self.dlos) == 0:
             raise Exception("This method works only with downlink problems")
 
@@ -125,76 +130,122 @@ class Chromosome:
             if overlap(dto, dto_):
                 return False
 
+        if not self.is_feasible():
+            print("sono all'inizio", self.is_constraint_respected(Constraint.SINGLE_SATISFACTION))
+            self.is_feasible()
+            raise Exception("Plan is not feasible")
+
         for dlo in self.dlos:
             if len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
                     set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
                 raise Exception("There are repeated DTOs in a DLO")
 
-        dtos_copy_2 = self.dtos.copy()
-        dtos_copy = self.dtos.copy()
+        if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
+            print(self.ars_served.sum())
+            raise Exception("Single satisfaction constraint is not respected")
+
+        self.add_dto(dto)
+        if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
+            print("DOPO")
+            print("len ar ids ", len(self.get_ars_served()))
+            print("bool array len: ", self.ars_served.sum())
+            raise Exception("Single satisfaction constraint is not respected")
         dlos_copy = self.dlos.copy()
 
         memory: float = 0
         added, downloaded, dlo_downloading_index = False, False, None
-        for j, dlo in enumerate(dlos_copy):
-            i: int = 0
-            while i < len(dtos_copy) and dlo['start_time'] > dtos_copy[i]['stop_time']:
-                print(f'{memory} + {dtos_copy[i]["memory"]}')
-                memory = round(memory + dtos_copy[i]['memory'], 2)
+        success: bool = True
+        i: int = 0
+        j: int = 0
+        # print("INIZIO")
+        array_dtos_in = []
+
+        for dlo in self.dlos:
+            for dto_downloaded in dlo['downloaded_dtos']:
+                if dto_downloaded not in self.dtos:
+                    print("ERROR: DTO not in solution")
+                    raise Exception("There is a downloaded DTO that is not in the solution")
+
+        # print(sum([len(dlo['downloaded_dtos']) for dlo in self.dlos]), len(self.dtos))
+        while i < len(self.dtos):
+            # if the DTO comes before the DLO j, sum its memory
+            if self.dtos[i]['stop_time'] < dlos_copy[j]['start_time']:
+                # print(f'At dto {i}, memory is {memory + self.dtos[i]["memory"]} = {memory} + {self.dtos[i]["memory"]}')
+                memory = memory + self.dtos[i]['memory']
+                # print(f'Insert dto {self.dtos[i]["id"]}')
+                array_dtos_in.append(self.dtos[i].copy())
+                # if memory exceed because the new DTO is added, stop iterating and return False
+                if memory > self.capacity:
+                    success = False
+                    break
                 i += 1
+            else:
+                # the DLO j downloads all DTOs that were already there
+                memory_downloaded: float = 0
+                for dto_ in dlos_copy[j]['downloaded_dtos']:
+                    # print(f'{memory} - {dto_["memory"]}')
+                    memory = memory - dto_['memory']
+                    # print(f'POP dto {dto_["id"]}')
+                    if dto_ not in array_dtos_in:
+                        print("ERROR")
+                        raise Exception("The DLO is downloading a DTO that was not inserted")
+                    array_dtos_in.remove(dto_)
+                    memory_downloaded = memory_downloaded + dto_['memory']
 
-            if not added and round(memory + dto['memory'], 2) <= self.capacity:
-                # index = find_insertion_point(dto, dtos_copy[:1])
-                # dtos_copy_2.insert(index, dto.copy())
-                # i += 1
-                print(f'{memory} + {dto["memory"]}')
-                memory = round(memory + dto['memory'], 2)
-                memory_saved = dto['memory']
-                dto_saved = dto
-                # print("DTO ADDED")
-                added = True
-
-            memory_downloaded: float = 0
-
-            for dlo_ in self.dlos:
-                if len(list(map(lambda dto__: dto__['id'], dlo_['downloaded_dtos']))) != len(
-                        set(list(map(lambda dto__: dto__['id'], dlo_['downloaded_dtos'])))):
-                    raise Exception("There are repeated DTOs in a DLO")
-            for dto_ in dlo['downloaded_dtos']:
-                print(f'{memory} - {dto_["memory"]}')
-                memory = round(memory - dto_['memory'], 2)
-                memory_downloaded = round(memory_downloaded + dto_['memory'], 2)
-
-            if added \
-                    and not downloaded \
-                    and dto['stop_time'] < dlo['start_time'] \
-                    and self.is_dto_downloadable(dto, dlo, memory_downloaded):
-                # dlo['downloaded_dtos'].append(dto)
-                print(f'{memory} - {dto["memory"]}')
-                memory = round(memory - dto['memory'], 2)
-                # print("DTO DOWLOADED")
-                # print(memory_saved, dto['memory'])
-                # print(dto_saved == dto)
                 if memory < 0:
-                    print(
-                        f"Duplicated ? {len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))))}")
-                    print(list(map(lambda dto__: (dto__['id'], dto__['memory']), dtos_copy_2)))
-                    print(f'Memory is negative: {memory}')
-                    print("Error at dlo index: ", j)
+                    # print(f'Memory is negative: {memory}')
+                    # print("Error at dlo index: ", j)
                     raise Exception('Memory is negative')
-                downloaded = True
-                dlo_downloading_index = j
 
-            if added and downloaded:
-                break
-            dtos_copy = dtos_copy[i:]
+                # if the new DTO was added, if it can be downloaded during the DLO j, it is downloaded
+                if not downloaded \
+                        and dto['stop_time'] < dlos_copy[j]['start_time'] \
+                        and self.is_dto_downloadable(dto, dlos_copy[j], memory_downloaded):
+                    # print(f'{memory} - {dto["memory"]}')
+                    memory = memory - dto['memory']
+                    dlo_downloading_index = j
+                    downloaded = True
 
-        if added and downloaded:
-            self.add_dto(dto)
-            self.dlos[dlo_downloading_index]['downloaded_dtos'].append(dto)
-            return True
+                # print(f'At dlo {j}, memory is {memory}')
+
+                j += 1
+
+        # print("FINE")
+        if success:
+            if dlo_downloading_index is not None:
+                self.dlos[dlo_downloading_index]['downloaded_dtos'].append(dto.copy())
         else:
-            return False
+            if downloaded:
+                raise Exception("The DTO was downloaded but the solution is not feasible")
+            self.remove_dto(dto.copy())
+
+            for dlo in self.dlos:
+                for dto_downloaded in dlo['downloaded_dtos']:
+                    if dto_downloaded not in self.dtos:
+                        raise Exception("There is a downloaded DTO that is not in the solution")
+
+        if not self.is_feasible():
+            print(f' MEMORY: {self.is_feasible(Constraint.MEMORY)},'
+                  f' OVERLAP: {self.is_feasible(Constraint.OVERLAP)},'
+                  f' SINGLE_SATISFACTION: {self.is_feasible(Constraint.SINGLE_SATISFACTION)},'
+                  f' DUPLICATES: {self.is_feasible(Constraint.DUPLICATES)}')
+            raise Exception("Plan is not feasible")
+
+        for dlo in self.dlos:
+            for dto_downloaded in dlo['downloaded_dtos']:
+                if dto_downloaded not in self.dtos:
+                    raise Exception("There is a downloaded DTO that is not in the solution")
+            if len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
+                    set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
+                raise Exception("There are repeated DTOs in a DLO")
+
+        if len(self.get_ars_served()) > self.ars_served.sum():
+            print("POST ADD AND DOWNLOAD")
+            print("len ar ids ", len(self.get_ars_served()))
+            print("bool array len: ", self.ars_served.sum())
+            raise Exception("ERROR: ARs served is not correct")
+
+        return success
 
     def remove_dto(self, dto: DTO) -> bool:
         """ Removes a DTO from the solution """
@@ -215,9 +266,17 @@ class Chromosome:
             raise IndexError("Index out of range")
         dto = self.dtos[index]
         self.dtos.pop(index)
-        self.tot_memory -= round(dto['memory'], 2)
+        self.tot_memory -= dto['memory']
         self.fitness -= dto['priority']
-        self.ars_served[dto['ar_index']] = False
+
+        same_ar_dtos = [dto_ for dto_ in self.dtos.copy() if dto_['ar_index'] == dto['ar_index']]
+        # if there aren't other dtos of the same AR, the AR is not served anymore
+        if len(same_ar_dtos) == 0:
+            self.ars_served[dto['ar_index']] = False
+
+        for dlo in self.dlos:
+            if dto in dlo['downloaded_dtos']:
+                dlo['downloaded_dtos'].remove(dto)
 
     def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
@@ -266,22 +325,50 @@ class Chromosome:
             if len(self.dlos) == 0:  # if problem is relaxed
                 return self.get_tot_memory() < self.capacity
             else:  # if problem includes down-links
-                dtos_copy = self.dtos.copy()
                 memory: float = 0
-                for dlo in self.dlos.copy():
-                    i: int = 0
-                    while i < len(dtos_copy) and dlo['start_time'] > dtos_copy[i]['stop_time']:
-                        memory = round(memory + dtos_copy[i]['memory'], 2)
+                i: int = 0
+                j: int = 0
+                while i < len(self.dtos):
+                    # if the DTO comes before the DLO j, sum its memory
+                    if self.dtos[i]['stop_time'] < self.dlos[j]['start_time']:
+                        memory = memory + self.dtos[i]['memory']
+                        # print(f'At dto {i}, memory is {memory}')
+                        # if memory exceed because the new DTO is added, stop iterating and return False
+                        if memory > self.capacity:
+                            # print(f"Memory exceeded: {memory} at dto: {i} before dlo: {j}")
+                            return False
                         i += 1
-                    dtos_copy = dtos_copy[i:]
-                    if memory > self.capacity:
-                        return False
-                    for dto in dlo['downloaded_dtos']:
-                        memory = round(memory - dto['memory'], 2)
+                    else:
+                        for dto in self.dlos[j]['downloaded_dtos']:
+                            memory = memory - dto['memory']
+                        # print(f'After dlo {j}, memory is {memory}')
 
-                    if memory < 0:
-                        return False
+                        if memory < 0:
+                            # print(f"Memory exceeded in negative: {memory} at dlo: {j}")
+                            return False
+                        j += 1
+
                 return True
+
+                # dtos_copy = self.dtos.copy()
+                # memory: float = 0
+                # for dlo in self.dlos.copy():
+                #     i: int = 0
+                #     while i < len(dtos_copy) and dlo['start_time'] > dtos_copy[i]['stop_time']:
+                #         memory = memory + dtos_copy[i]['memory']
+                #         print(f'At dto {i}, memory is {memory}')
+                #         i += 1
+                #     dtos_copy = dtos_copy[i:]
+                #     if memory > self.capacity:
+                #         print(f"Memory exceeded: {memory} at dlo index: {self.dlos.index(dlo)} and dto index: {i - 1}")
+                #         return False
+                #     for dto in dlo['downloaded_dtos']:
+                #         memory = memory - dto['memory']
+                #     print(f'At dlo {self.dlos.index(dlo)}, memory is {memory}')
+                #
+                #     if memory < 0:
+                #         return False
+                # return True
 
         elif constraint == Constraint.OVERLAP:
             for index in range(self.size() - 1):
@@ -323,13 +410,13 @@ class Chromosome:
                 i: int = 0
                 start_index = i
                 while i < len(dtos_copy) and dlo['start_time'] > dtos_copy[i]['stop_time']:
-                    memory = round(memory + dtos_copy[i]['memory'], 2)
+                    memory = memory + dtos_copy[i]['memory']
                     i += 1
 
                 restart = False
                 while memory > self.capacity:
                     index = np.random.randint(start_index, i)
-                    memory = round(memory - dtos_copy[index]['memory'], 2)
+                    memory = memory - dtos_copy[index]['memory']
                     self.remove_dto(dtos_copy[index])
                     dtos_copy.pop(index)
                     i -= 1
@@ -338,7 +425,7 @@ class Chromosome:
                     return False
 
                 for dto in dlo['downloaded_dtos']:
-                    memory = round(memory - dto['memory'], 2)
+                    memory = memory - dto['memory']
 
                 dtos_copy = dtos_copy[i:]
 
@@ -371,6 +458,11 @@ class Chromosome:
             index = np.where(np.array(self.get_ars_served()) == ar_id)[0][0]
             self.remove_dto_at(index)
 
+        if len(self.get_ars_served()) > self.ars_served.sum():
+            print("len ar ids ", len(self.get_ars_served()))
+            print("bool array len: ", self.ars_served.sum())
+            raise Exception("Repair satisfaction failed")
+
     def plot_memory(self):
         """ Shows the memory trend of the solution on a graph """
         activities = self.dtos + self.dlos
@@ -379,10 +471,10 @@ class Chromosome:
         current_memory: float = 0
         for activity in activities:
             if 'ar_id' in activity:
-                current_memory = round(current_memory + activity['memory'], 2)
+                current_memory = current_memory + activity['memory']
             else:
                 for dto in activity['downloaded_dtos']:
-                    current_memory = round(current_memory - dto['memory'], 2)
+                    current_memory = current_memory - dto['memory']
             memories.append(current_memory)
 
         x = np.arange(len(activities) + 1)
@@ -406,7 +498,7 @@ class Chromosome:
             else:
                 dtos_between_dlos: [DTO] = self.get_dtos_between_dates(self.dlos[j - 1]['stop_time'], dlo['start_time'])
 
-            memory = round(memory + round(sum(list(map(lambda dto_: dto_['memory'], dtos_between_dlos))), 2), 2)
+            memory = memory + sum(list(map(lambda dto_: dto_['memory'], dtos_between_dlos)))
             downloadable_dtos += dtos_between_dlos
             downloadable_dtos.sort(key=lambda dto_: dto_['memory'], reverse=True)
             memory_downloaded: float = 0
@@ -418,13 +510,18 @@ class Chromosome:
 
                 if self.is_dto_downloadable(dto, dlo, memory_downloaded):
                     dlo['downloaded_dtos'].append(dto.copy())
-                    memory = round(memory - dto['memory'], 2)
+                    memory = memory - dto['memory']
                     if memory < 0:
                         raise Exception('Memory is negative')
                     memory_downloaded += dto['memory']
                     downloadable_dtos.remove(dto)
                     i -= 1
                 i += 1
+
+        for dlo in self.dlos:
+            if len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
+                    set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
+                raise Exception("There are repeated DTOs in a DLO")
 
     def __str__(self) -> str:
         return f'Fitness: {self.fitness},\nFeasible: {self.is_feasible()},\nMemory occupied: {self.tot_memory},' \

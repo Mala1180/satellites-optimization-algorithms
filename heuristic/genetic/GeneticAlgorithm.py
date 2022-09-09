@@ -17,7 +17,7 @@ class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
     def __init__(self, capacity, total_dtos, total_ars, total_dlos=None, downlink_rate=None,
-                 num_generations=10, num_chromosomes=30, num_elites=3, crossover_strategy='time_feasible'):
+                 num_generations=10, num_chromosomes=10, num_elites=3, crossover_strategy='time_feasible'):
         """ Creates a random initial population and prepares data for the algorithm """
         if crossover_strategy == 'single':
             self.crossover_strategy = SinglePointCrossover()
@@ -33,7 +33,7 @@ class GeneticAlgorithm:
         print(f'Capacity: {capacity}')
         self.total_dtos: [DTO] = total_dtos.copy()
         for dto in self.total_dtos:
-            dto['memory'] = round(dto['memory'], 2)
+            dto['memory']: int = round(dto['memory'])
         self.total_ars: [DTO] = total_ars.copy()
         self.total_dlos: [DLO] = []
         if total_dlos is not None:
@@ -92,13 +92,7 @@ class GeneticAlgorithm:
             # Replaces 10% of DTOs in the plan with new random DTOs
             for _ in range(len(chromosome.dtos) // 10):
                 new_dto = choice(self.total_dtos)
-
-                # if chromosome.keeps_feasibility(new_dto):
-                # chromosome.remove_dto_at(np.random.randint(0, len(chromosome.dtos)))
                 chromosome.add_dto(new_dto)
-
-            if not chromosome.is_constraint_respected(Constraint.DUPLICATES):
-                raise Exception('The solution contains duplicates')
 
     def repair(self):
         """ Repairs the population if some chromosomes are not feasible """
@@ -107,6 +101,8 @@ class GeneticAlgorithm:
                 chromosome.repair_overlap()
             if not chromosome.is_feasible(Constraint.SINGLE_SATISFACTION):
                 chromosome.repair_satisfaction()
+                if not chromosome.is_feasible(Constraint.SINGLE_SATISFACTION):
+                    raise Exception('Constraint violated')
             if not chromosome.is_feasible(Constraint.DUPLICATES):
                 chromosome.repair_duplicates()
             if not chromosome.is_feasible(Constraint.MEMORY):
@@ -119,18 +115,17 @@ class GeneticAlgorithm:
 
     def local_search(self):
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
-        for chromosome in self.population:
-            for dto in self.ordered_dtos:
+        for chromosome in list(set(self.population) - set(self.elites)):
+            for dto in self.ordered_dtos[:len(self.ordered_dtos) // 2]:
                 if len(self.total_dlos) == 0:
                     if chromosome.keeps_feasibility(dto):
                         chromosome.add_dto(dto)
                 else:
-                    for dlo in chromosome.dlos:
-                        if len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
-                                set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
-                            print()
-                            raise Exception("There are repeated DTOs in a DLO")
                     chromosome.add_and_download_dto(dto)
+                    if len(chromosome.get_ars_served()) > chromosome.ars_served.sum():
+                        print("POST ADD AND DOWNLOAD")
+                        print("len ar ids ", len(chromosome.get_ars_served()))
+                        print("bool array len: ", chromosome.ars_served.sum())
 
             # chromosome.update_downloaded_dtos()
 
@@ -151,7 +146,7 @@ class GeneticAlgorithm:
             print(f'Fitness: {self.fitness_history[i]}')
 
     def update_downloaded_dtos(self):
-        for chromosome in self.population:
+        for chromosome in list(set(self.population) - set(self.elites)):
             chromosome.update_downloaded_dtos()
 
     def get_best_solution(self) -> Chromosome:
@@ -180,3 +175,8 @@ class GeneticAlgorithm:
             plt.plot(np.arange(0, self.num_generations), history[:, i])
         plt.title('Fitness values - Generations')
         plt.show()
+
+    def reset_downloaded_dtos(self):
+        for chromosome in self.population:
+            for dlo in chromosome.dlos:
+                dlo['downloaded_dtos'] = []
