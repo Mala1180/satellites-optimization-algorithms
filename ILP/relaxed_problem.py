@@ -33,7 +33,6 @@ for index_dto, dto in enumerate(dtos):
     priorities.append(next((ar['rank'] for ar in ars if ar['id'] == dto['ar_id']), None))
 
 memories = np.array(list(map(lambda dto_: dto_["memory"], dtos)))
-dtos_id = np.array(list(map(lambda dto_: dto_["id"], dtos)))
 
 # Read and solve model
 model = gp.Model()
