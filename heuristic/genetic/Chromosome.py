@@ -112,11 +112,6 @@ class Chromosome:
 
     def add_and_download_dto(self, dto: DTO) -> bool:
         """ Adds a DTO to the solution and downloads it, returns True if the insertion and download were successful """
-        if len(self.get_ars_served()) > self.ars_served.sum():
-            print("POST ADD AND DOWNLOAD")
-            print("len ar ids ", len(self.get_ars_served()))
-            print("bool array len: ", self.ars_served.sum())
-
         if len(self.dlos) == 0:
             raise Exception("This method works only with downlink problems")
 
@@ -125,31 +120,36 @@ class Chromosome:
             return False
 
         # Checks if the DTO would overlap with another DTO
-        # TODO: it can be optimized by using find_insertion_point
-        for dto_ in self.dtos:
-            if overlap(dto, dto_):
+        # Logarithmic method
+        index = find_insertion_point(dto, self.dtos)
+        if index == 0:
+            if overlap(dto, self.dtos[0]):
+                return False
+        elif index == len(self.dtos):
+            if overlap(dto, self.dtos[-1]):
+                return False
+        else:
+            if overlap(dto, self.dtos[index - 1]) or overlap(dto, self.dtos[index]):
                 return False
 
+        # Linear method
+        # for dto_ in self.dtos:
+        #     if overlap(dto, dto_):
+        #         return False
+
         if not self.is_feasible():
-            print("sono all'inizio", self.is_constraint_respected(Constraint.SINGLE_SATISFACTION))
-            self.is_feasible()
             raise Exception("Plan is not feasible")
 
-        for dlo in self.dlos:
-            if len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
-                    set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
-                raise Exception("There are repeated DTOs in a DLO")
-
-        if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
-            print(self.ars_served.sum())
-            raise Exception("Single satisfaction constraint is not respected")
+        # if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
+        #     print(self.ars_served.sum())
+        #     raise Exception("Single satisfaction constraint is not respected")
 
         self.add_dto(dto)
-        if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
-            print("DOPO")
-            print("len ar ids ", len(self.get_ars_served()))
-            print("bool array len: ", self.ars_served.sum())
-            raise Exception("Single satisfaction constraint is not respected")
+        # if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
+        #     print("DOPO")
+        #     print("len ar ids ", len(self.get_ars_served()))
+        #     print("bool array len: ", self.ars_served.sum())
+        #     raise Exception("Single satisfaction constraint is not respected")
         dlos_copy = self.dlos.copy()
 
         memory: float = 0
@@ -157,14 +157,12 @@ class Chromosome:
         success: bool = True
         i: int = 0
         j: int = 0
-        # print("INIZIO")
-        array_dtos_in = []
 
-        for dlo in self.dlos:
-            for dto_downloaded in dlo['downloaded_dtos']:
-                if dto_downloaded not in self.dtos:
-                    print("ERROR: DTO not in solution")
-                    raise Exception("There is a downloaded DTO that is not in the solution")
+        # for dlo in self.dlos:
+        #     for dto_downloaded in dlo['downloaded_dtos']:
+        #         if dto_downloaded not in self.dtos:
+        #             print("ERROR: DTO not in solution")
+        #             raise Exception("There is a downloaded DTO that is not in the solution")
 
         # print(sum([len(dlo['downloaded_dtos']) for dlo in self.dlos]), len(self.dtos))
         while i < len(self.dtos):
@@ -172,8 +170,6 @@ class Chromosome:
             if self.dtos[i]['stop_time'] < dlos_copy[j]['start_time']:
                 # print(f'At dto {i}, memory is {memory + self.dtos[i]["memory"]} = {memory} + {self.dtos[i]["memory"]}')
                 memory = memory + self.dtos[i]['memory']
-                # print(f'Insert dto {self.dtos[i]["id"]}')
-                array_dtos_in.append(self.dtos[i].copy())
                 # if memory exceed because the new DTO is added, stop iterating and return False
                 if memory > self.capacity:
                     success = False
@@ -185,11 +181,6 @@ class Chromosome:
                 for dto_ in dlos_copy[j]['downloaded_dtos']:
                     # print(f'{memory} - {dto_["memory"]}')
                     memory = memory - dto_['memory']
-                    # print(f'POP dto {dto_["id"]}')
-                    if dto_ not in array_dtos_in:
-                        print("ERROR")
-                        raise Exception("The DLO is downloading a DTO that was not inserted")
-                    array_dtos_in.remove(dto_)
                     memory_downloaded = memory_downloaded + dto_['memory']
 
                 if memory < 0:
@@ -201,7 +192,6 @@ class Chromosome:
                 if not downloaded \
                         and dto['stop_time'] < dlos_copy[j]['start_time'] \
                         and self.is_dto_downloadable(dto, dlos_copy[j], memory_downloaded):
-                    # print(f'{memory} - {dto["memory"]}')
                     memory = memory - dto['memory']
                     dlo_downloading_index = j
                     downloaded = True
@@ -210,7 +200,6 @@ class Chromosome:
 
                 j += 1
 
-        # print("FINE")
         if success:
             if dlo_downloading_index is not None:
                 self.dlos[dlo_downloading_index]['downloaded_dtos'].append(dto.copy())
@@ -224,26 +213,12 @@ class Chromosome:
                     if dto_downloaded not in self.dtos:
                         raise Exception("There is a downloaded DTO that is not in the solution")
 
-        if not self.is_feasible():
-            print(f' MEMORY: {self.is_feasible(Constraint.MEMORY)},'
-                  f' OVERLAP: {self.is_feasible(Constraint.OVERLAP)},'
-                  f' SINGLE_SATISFACTION: {self.is_feasible(Constraint.SINGLE_SATISFACTION)},'
-                  f' DUPLICATES: {self.is_feasible(Constraint.DUPLICATES)}')
-            raise Exception("Plan is not feasible")
-
-        for dlo in self.dlos:
-            for dto_downloaded in dlo['downloaded_dtos']:
-                if dto_downloaded not in self.dtos:
-                    raise Exception("There is a downloaded DTO that is not in the solution")
-            if len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
-                    set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
-                raise Exception("There are repeated DTOs in a DLO")
-
-        if len(self.get_ars_served()) > self.ars_served.sum():
-            print("POST ADD AND DOWNLOAD")
-            print("len ar ids ", len(self.get_ars_served()))
-            print("bool array len: ", self.ars_served.sum())
-            raise Exception("ERROR: ARs served is not correct")
+        # if not self.is_feasible():
+        #     print(f' MEMORY: {self.is_feasible(Constraint.MEMORY)},'
+        #           f' OVERLAP: {self.is_feasible(Constraint.OVERLAP)},'
+        #           f' SINGLE_SATISFACTION: {self.is_feasible(Constraint.SINGLE_SATISFACTION)},'
+        #           f' DUPLICATES: {self.is_feasible(Constraint.DUPLICATES)}')
+        #     raise Exception("Plan is not feasible")
 
         return success
 
@@ -252,11 +227,6 @@ class Chromosome:
         index = binary_search(dto, self.dtos)
         if index == -1:
             return False
-        # if len(self.dlos) > 0:
-        #     for dlo in self.dlos:
-        #         index = binary_search(dto, dlo['downloaded_dtos'])
-        #         if index != -1:
-        #             dlo['downloaded_dtos'].pop(index)
         return self.remove_dto_at(index)
 
     def remove_dto_at(self, index: int):
@@ -292,10 +262,21 @@ class Chromosome:
             return False
 
         # Checks if the DTO would overlap with another DTO
-        # TODO: it can be optimized by using find_insertion_point
-        for dto_ in self.dtos:
-            if overlap(dto, dto_):
+        # Logarithmic method
+        index = find_insertion_point(dto, self.dtos)
+        if index == 0:
+            if overlap(dto, self.dtos[0]):
                 return False
+        elif index == len(self.dtos):
+            if overlap(dto, self.dtos[-1]):
+                return False
+        else:
+            if overlap(dto, self.dtos[index - 1]) or overlap(dto, self.dtos[index]):
+                return False
+        # Linear method
+        # for dto_ in self.dtos:
+        #     if overlap(dto, dto_):
+        #         return False
         return True
 
     def is_feasible(self, constraint: Constraint = None) -> bool:
@@ -349,26 +330,6 @@ class Chromosome:
                         j += 1
 
                 return True
-
-                # dtos_copy = self.dtos.copy()
-                # memory: float = 0
-                # for dlo in self.dlos.copy():
-                #     i: int = 0
-                #     while i < len(dtos_copy) and dlo['start_time'] > dtos_copy[i]['stop_time']:
-                #         memory = memory + dtos_copy[i]['memory']
-                #         print(f'At dto {i}, memory is {memory}')
-                #         i += 1
-                #     dtos_copy = dtos_copy[i:]
-                #     if memory > self.capacity:
-                #         print(f"Memory exceeded: {memory} at dlo index: {self.dlos.index(dlo)} and dto index: {i - 1}")
-                #         return False
-                #     for dto in dlo['downloaded_dtos']:
-                #         memory = memory - dto['memory']
-                #     print(f'At dlo {self.dlos.index(dlo)}, memory is {memory}')
-                #
-                #     if memory < 0:
-                #         return False
-                # return True
 
         elif constraint == Constraint.OVERLAP:
             for index in range(self.size() - 1):
@@ -517,11 +478,6 @@ class Chromosome:
                     downloadable_dtos.remove(dto)
                     i -= 1
                 i += 1
-
-        for dlo in self.dlos:
-            if len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
-                    set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
-                raise Exception("There are repeated DTOs in a DLO")
 
     def __str__(self) -> str:
         return f'Fitness: {self.fitness},\nFeasible: {self.is_feasible()},\nMemory occupied: {self.tot_memory},' \
