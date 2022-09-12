@@ -107,13 +107,15 @@ for j in range(1, DLOS_NUMBER):
 # # add DTO selected in plan constraint
 # for j in range(DLOS_NUMBER):
 #     for i in range(DTOS_NUMBER):
-#         model.addConstr(z_ji[j][i] <= dtos_variables[i], f'DTO_selected_in_plan_constraint_DLO:{j}_DTO:{i}')
+#         model.addConstr(z_ji[j][i] <= dtos_variables[i],
+#                         f'DTO_selected_in_plan_constraint_DLO:{j}_DTO:{i}')
 #
 # # add single downlink constraint
 # for i in range(DTOS_NUMBER):
-#     model.addConstr(gp.quicksum([z_ji[j][i] for j in range(DLOS_NUMBER)]) <= 1)
+#     model.addConstr(gp.quicksum([z_ji[j][i] for j in range(DLOS_NUMBER)]) <= 1,
+#                     f'Single_downlink_constraint_DTO:{i}')
 
-# last two commented constraints can be reduced to the next one (maybe)
+# last two commented constraints can be reduced to the next one
 for i in range(DTOS_NUMBER):
     model.addConstr(gp.quicksum([z_ji[j][i] for j in range(DLOS_NUMBER)]) <= dtos_variables[i],
                     f'Single_downlink_constraint_'
