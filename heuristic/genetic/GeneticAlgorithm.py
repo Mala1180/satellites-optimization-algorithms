@@ -9,7 +9,7 @@ from .crossover import MultiPointCrossover
 from .crossover import SinglePointCrossover
 from .crossover import TimeFeasibleCrossover
 
-from .my_types import DTO, DLO
+from .my_types import DTO, DLO, DEBUG
 from .parent_selection import RouletteWheelSelection
 
 
@@ -47,7 +47,8 @@ class GeneticAlgorithm:
         self.population: [Chromosome] = []
 
         for i in range(num_chromosomes):
-            chromosome = Chromosome(self.capacity, total_ars.copy(), tot_dlos=self.total_dlos.copy(),
+            chromosome = Chromosome(self.capacity, total_ars.copy(),
+                                    tot_dlos=self.total_dlos.copy(),
                                     downlink_rate=self.downlink_rate)
             shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
 
@@ -81,7 +82,7 @@ class GeneticAlgorithm:
             son = Chromosome(self.capacity, self.total_ars.copy(), son_dtos.copy(),
                              self.total_dlos.copy(), self.downlink_rate)
             sons.append(son)
-            if not son.is_constraint_respected(Constraint.DUPLICATES):
+            if DEBUG and not son.is_constraint_respected(Constraint.DUPLICATES):
                 raise Exception('The solution contains duplicates')
 
         self.population = self.elites + sons
@@ -101,7 +102,7 @@ class GeneticAlgorithm:
                 chromosome.repair_overlap()
             if not chromosome.is_feasible(Constraint.SINGLE_SATISFACTION):
                 chromosome.repair_satisfaction()
-                if not chromosome.is_feasible(Constraint.SINGLE_SATISFACTION):
+                if DEBUG and not chromosome.is_feasible(Constraint.SINGLE_SATISFACTION):
                     raise Exception('Constraint violated')
             if not chromosome.is_feasible(Constraint.DUPLICATES):
                 chromosome.repair_duplicates()
@@ -109,23 +110,23 @@ class GeneticAlgorithm:
                 while not chromosome.repair_memory():
                     chromosome.update_downloaded_dtos()
             for dlo in chromosome.dlos:
-                if len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
+                if DEBUG and len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
                         set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
                     raise Exception("There are repeated DTOs in a DLO")
 
     def local_search(self):
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
         for chromosome in list(set(self.population) - set(self.elites)):
-            for dto in self.ordered_dtos[:len(self.ordered_dtos) // 2]:
+            for dto in self.ordered_dtos[:len(self.ordered_dtos) // 5]:
                 if len(self.total_dlos) == 0:
                     if chromosome.keeps_feasibility(dto):
                         chromosome.add_dto(dto)
                 else:
                     chromosome.add_and_download_dto(dto)
-                    if len(chromosome.get_ars_served()) > chromosome.ars_served.sum():
-                        print("POST ADD AND DOWNLOAD")
+                    if DEBUG and len(chromosome.get_ars_served()) > chromosome.ars_served.sum():
                         print("len ar ids ", len(chromosome.get_ars_served()))
                         print("bool array len: ", chromosome.ars_served.sum())
+                        raise Exception("There are repeated ARs in the plan")
 
             # chromosome.update_downloaded_dtos()
 
@@ -175,8 +176,3 @@ class GeneticAlgorithm:
             plt.plot(np.arange(0, self.num_generations), history[:, i])
         plt.title('Fitness values - Generations')
         plt.show()
-
-    def reset_downloaded_dtos(self):
-        for chromosome in self.population:
-            for dlo in chromosome.dlos:
-                dlo['downloaded_dtos'] = []

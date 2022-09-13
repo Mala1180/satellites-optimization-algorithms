@@ -4,3 +4,5 @@ DTO = TypeVar("DTO")
 DLO = TypeVar("DLO")
 AR = TypeVar("AR")
 ndarray = TypeVar("ndarray")
+
+DEBUG = True

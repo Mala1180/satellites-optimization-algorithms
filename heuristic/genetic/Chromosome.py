@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from utils import Constraint
 from utils.functions import overlap, binary_search, find_insertion_point
-from .my_types import DTO, AR, DLO, ndarray
+from .my_types import DTO, AR, DLO, ndarray, DEBUG
 
 
 class Chromosome:
@@ -37,10 +37,10 @@ class Chromosome:
         if len(self.dtos) == 0:
             self.ars_served: ndarray = np.full(len(ars), False)
         else:
-            self.ars_served: ndarray = np.full(len(ars), False)
-            for dto in self.dtos:
-                self.ars_served[dto['ar_index']] = True
-            # self.ars_served: ndarray = np.isin(self.ar_ids, [dto['ar_id'] for dto in self.dtos])
+            # self.ars_served: ndarray = np.full(len(ars), False)
+            # for dto in self.dtos:
+            #     self.ars_served[dto['ar_index']] = True
+            self.ars_served: ndarray = np.isin(self.ar_ids, [dto['ar_id'] for dto in self.dtos])
 
             # print("HERE ", np.all(self.ars_served_2 == self.ars_served))
 
@@ -137,19 +137,10 @@ class Chromosome:
         #     if overlap(dto, dto_):
         #         return False
 
-        if not self.is_feasible():
+        if DEBUG and not self.is_feasible():
             raise Exception("Plan is not feasible")
 
-        # if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
-        #     print(self.ars_served.sum())
-        #     raise Exception("Single satisfaction constraint is not respected")
-
         self.add_dto(dto)
-        # if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
-        #     print("DOPO")
-        #     print("len ar ids ", len(self.get_ars_served()))
-        #     print("bool array len: ", self.ars_served.sum())
-        #     raise Exception("Single satisfaction constraint is not respected")
         dlos_copy = self.dlos.copy()
 
         memory: float = 0
@@ -158,14 +149,7 @@ class Chromosome:
         i: int = 0
         j: int = 0
 
-        # for dlo in self.dlos:
-        #     for dto_downloaded in dlo['downloaded_dtos']:
-        #         if dto_downloaded not in self.dtos:
-        #             print("ERROR: DTO not in solution")
-        #             raise Exception("There is a downloaded DTO that is not in the solution")
-
-        # print(sum([len(dlo['downloaded_dtos']) for dlo in self.dlos]), len(self.dtos))
-        while i < len(self.dtos):
+        while i < len(self.dtos) and not downloaded:
             # if the DTO comes before the DLO j, sum its memory
             if self.dtos[i]['stop_time'] < dlos_copy[j]['start_time']:
                 # print(f'At dto {i}, memory is {memory + self.dtos[i]["memory"]} = {memory} + {self.dtos[i]["memory"]}')
@@ -183,9 +167,7 @@ class Chromosome:
                     memory = memory - dto_['memory']
                     memory_downloaded = memory_downloaded + dto_['memory']
 
-                if memory < 0:
-                    # print(f'Memory is negative: {memory}')
-                    # print("Error at dlo index: ", j)
+                if DEBUG and memory < 0:
                     raise Exception('Memory is negative')
 
                 # if the new DTO was added, if it can be downloaded during the DLO j, it is downloaded
@@ -204,21 +186,9 @@ class Chromosome:
             if dlo_downloading_index is not None:
                 self.dlos[dlo_downloading_index]['downloaded_dtos'].append(dto.copy())
         else:
-            if downloaded:
+            if DEBUG and downloaded:
                 raise Exception("The DTO was downloaded but the solution is not feasible")
             self.remove_dto(dto.copy())
-
-            for dlo in self.dlos:
-                for dto_downloaded in dlo['downloaded_dtos']:
-                    if dto_downloaded not in self.dtos:
-                        raise Exception("There is a downloaded DTO that is not in the solution")
-
-        # if not self.is_feasible():
-        #     print(f' MEMORY: {self.is_feasible(Constraint.MEMORY)},'
-        #           f' OVERLAP: {self.is_feasible(Constraint.OVERLAP)},'
-        #           f' SINGLE_SATISFACTION: {self.is_feasible(Constraint.SINGLE_SATISFACTION)},'
-        #           f' DUPLICATES: {self.is_feasible(Constraint.DUPLICATES)}')
-        #     raise Exception("Plan is not feasible")
 
         return success
 
@@ -424,25 +394,6 @@ class Chromosome:
             print("bool array len: ", self.ars_served.sum())
             raise Exception("Repair satisfaction failed")
 
-    def plot_memory(self):
-        """ Shows the memory trend of the solution on a graph """
-        activities = self.dtos + self.dlos
-        activities = sorted(activities, key=lambda activity_: activity_['start_time'])
-        memories = [0]
-        current_memory: float = 0
-        for activity in activities:
-            if 'ar_id' in activity:
-                current_memory = current_memory + activity['memory']
-            else:
-                for dto in activity['downloaded_dtos']:
-                    current_memory = current_memory - dto['memory']
-            memories.append(current_memory)
-
-        x = np.arange(len(activities) + 1)
-        plt.plot(x, memories, 'r-')
-        plt.title('Memory')
-        plt.show()
-
     def update_downloaded_dtos(self):
         memory: float = 0
         downloadable_dtos: [DTO] = []
@@ -450,8 +401,8 @@ class Chromosome:
         for dlo in self.dlos:
             dlo['downloaded_dtos'] = []
 
-        if not self.is_constraint_respected(Constraint.DUPLICATES):
-            raise Exception('The solution contains duplicates')
+        # if not self.is_constraint_respected(Constraint.DUPLICATES):
+        #     raise Exception('The solution contains duplicates')
 
         for j, dlo in enumerate(self.dlos):
             if j == 0:
@@ -478,6 +429,25 @@ class Chromosome:
                     downloadable_dtos.remove(dto)
                     i -= 1
                 i += 1
+
+    def plot_memory(self):
+        """ Shows the memory trend of the solution on a graph """
+        activities = self.dtos + self.dlos
+        activities = sorted(activities, key=lambda activity_: activity_['start_time'])
+        memories = [0]
+        current_memory: float = 0
+        for activity in activities:
+            if 'ar_id' in activity:
+                current_memory = current_memory + activity['memory']
+            else:
+                for dto in activity['downloaded_dtos']:
+                    current_memory = current_memory - dto['memory']
+            memories.append(current_memory)
+
+        x = np.arange(len(activities) + 1)
+        plt.plot(x, memories, 'r-')
+        plt.title('Memory')
+        plt.show()
 
     def __str__(self) -> str:
         return f'Fitness: {self.fitness},\nFeasible: {self.is_feasible()},\nMemory occupied: {self.tot_memory},' \
