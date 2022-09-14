@@ -106,8 +106,6 @@ class GeneticAlgorithm:
                 chromosome.repair_overlap()
             if not chromosome.is_feasible(Constraint.SINGLE_SATISFACTION):
                 chromosome.repair_satisfaction()
-                if DEBUG and not chromosome.is_feasible(Constraint.SINGLE_SATISFACTION):
-                    raise Exception('Constraint violated')
             if not chromosome.is_feasible(Constraint.DUPLICATES):
                 chromosome.repair_duplicates()
             if not chromosome.is_feasible(Constraint.MEMORY):

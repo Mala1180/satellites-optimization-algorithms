@@ -25,7 +25,6 @@ class Chromosome:
         self.dtos = sorted(self.dtos, key=lambda dto_: dto_['start_time'])
         # Loads ARs
         self.ars: [AR] = [ar for ar in ars]
-        self.ar_ids: [int] = list(map(lambda ar: ar['id'], self.ars))
         # Loads DLOs
         self.dlos: [DLO] = []
         for j in range(len(tot_dlos)):
@@ -36,14 +35,15 @@ class Chromosome:
         self.dlos = sorted(self.dlos, key=lambda dlo_: dlo_['start_time'])
 
         if len(self.dtos) == 0:
+            self.ar_ids_served: [int] = []
             self.ars_served: ndarray = np.full(len(ars), False)
         else:
             # self.ars_served: ndarray = np.full(len(ars), False)
             # for dto in self.dtos:
             #     self.ars_served[dto['ar_index']] = True
-            self.ars_served: ndarray = np.isin(self.ar_ids, [dto['ar_id'] for dto in self.dtos])
-
-            # print("HERE ", np.all(self.ars_served_2 == self.ars_served))
+            self.ar_ids_served: [int] = [dto['ar_id'] for dto in self.dtos]
+            self.ars_served: ndarray = np.isin(np.array(list(map(lambda ar: ar['id'], self.ars))),
+                                               np.array(self.ar_ids_served))
 
         self.fitness: float = sum(self.get_priorities())
         self.tot_memory: float = sum(self.get_memories())
@@ -81,7 +81,8 @@ class Chromosome:
 
     def get_ars_served(self) -> [int]:
         """ Returns the ARs ids satisfied by the solution """
-        return list(map(lambda dto: dto['ar_id'], self.dtos))
+        # return list(map(lambda dto: dto['ar_id'], self.dtos))
+        return self.ar_ids_served
 
     def get_last_dto(self) -> Optional[DTO]:
         """ Returns the last DTO in the solution """
@@ -109,6 +110,9 @@ class Chromosome:
         self.tot_memory += dto['memory']
         self.fitness += dto['priority']
         self.ars_served[dto['ar_index']] = True
+        self.ar_ids_served.append(dto['ar_id'])
+        if len(self.get_ars_served()) != len(self.dtos):
+            raise Exception("Error: ARs served and DTOs served are not equal")
         return True
 
     def add_and_download_dto(self, dto: DTO) -> bool:
@@ -139,6 +143,9 @@ class Chromosome:
         backup_dlos = deepcopy(self.dlos)
         # backup_dtos = deepcopy(self.dtos)
         self.add_dto(dto)
+
+        if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
+            raise Exception("Single satisfaction violated")
 
         memory: float = 0
         added, downloaded, term_condition = False, False, True
@@ -212,13 +219,17 @@ class Chromosome:
             print(f'Index:{index}, len(self.dtos):{len(self.dtos)}')
             raise IndexError("Index out of range")
         dto = self.dtos[index]
+        self.ar_ids_served.remove(dto['ar_id'])
         self.dtos.pop(index)
         self.tot_memory -= dto['memory']
         self.fitness -= dto['priority']
 
-        same_ar_dtos = [dto_ for dto_ in self.dtos.copy() if dto_['ar_index'] == dto['ar_index']]
-        # if there aren't other dtos of the same AR, the AR is not served anymore
-        if len(same_ar_dtos) == 0:
+        # same_ar_dtos = [dto_ for dto_ in self.dtos if dto_['ar_id'] == dto['ar_id']]
+        # # if there aren't other dtos of the same AR, the AR is not served anymore
+        # if len(same_ar_dtos) == 0:
+        #     self.ars_served[dto['ar_index']] = False
+
+        if dto['ar_id'] not in self.ar_ids_served:
             self.ars_served[dto['ar_index']] = False
 
         for dlo in self.dlos:
@@ -386,10 +397,11 @@ class Chromosome:
         ars_duplicate = [item for item, count in collections.Counter(self.get_ars_served()).items() if count > 1]
 
         for ar_id in ars_duplicate:
-            index = np.where(np.array(self.get_ars_served()) == ar_id)[0][0]
-            self.remove_dto_at(index)
+            dtos_same_ar = [dto for dto in self.dtos if dto['ar_id'] == ar_id]
+            self.remove_dto(dtos_same_ar[0])
 
-        if DEBUG and len(self.get_ars_served()) > self.ars_served.sum():
+        if DEBUG and not self.is_feasible(Constraint.SINGLE_SATISFACTION):
+            print(f"ARS served: {len(self.get_ars_served())}, {self.ars_served.sum()}")
             raise Exception("Repair satisfaction failed")
 
     def update_downloaded_dtos(self):
