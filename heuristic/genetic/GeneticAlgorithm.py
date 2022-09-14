@@ -95,6 +95,10 @@ class GeneticAlgorithm:
                 new_dto = choice(self.total_dtos)
                 chromosome.add_dto(new_dto)
 
+    def update_downloaded_dtos(self):
+        for chromosome in list(set(self.population) - set(self.elites)):
+            chromosome.update_downloaded_dtos()
+
     def repair(self):
         """ Repairs the population if some chromosomes are not feasible """
         for chromosome in self.population:
@@ -117,18 +121,15 @@ class GeneticAlgorithm:
     def local_search(self):
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
         for chromosome in list(set(self.population) - set(self.elites)):
-            for dto in self.ordered_dtos[:len(self.ordered_dtos) // 5]:
+            # dtos_to_insert = [dto for dto in self.ordered_dtos if dto not in chromosome.dtos]
+            for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]:
                 if len(self.total_dlos) == 0:
                     if chromosome.keeps_feasibility(dto):
                         chromosome.add_dto(dto)
                 else:
                     chromosome.add_and_download_dto(dto)
                     if DEBUG and len(chromosome.get_ars_served()) > chromosome.ars_served.sum():
-                        print("len ar ids ", len(chromosome.get_ars_served()))
-                        print("bool array len: ", chromosome.ars_served.sum())
                         raise Exception("There are repeated ARs in the plan")
-
-            # chromosome.update_downloaded_dtos()
 
     def run(self):
         """ Starts the algorithm itself """
@@ -145,10 +146,6 @@ class GeneticAlgorithm:
             chromosome_fitness = [chromosome.get_tot_fitness() for chromosome in self.population]
             self.fitness_history.append(chromosome_fitness)
             print(f'Fitness: {self.fitness_history[i]}')
-
-    def update_downloaded_dtos(self):
-        for chromosome in list(set(self.population) - set(self.elites)):
-            chromosome.update_downloaded_dtos()
 
     def get_best_solution(self) -> Chromosome:
         """ Returns the best solution in the population after running of the algorithm """
