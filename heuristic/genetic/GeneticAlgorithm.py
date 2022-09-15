@@ -1,4 +1,6 @@
-from random import sample, choice
+import random
+import sys
+# from random import sample, choice
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,7 +10,6 @@ from . import Chromosome
 from .crossover import MultiPointCrossover
 from .crossover import SinglePointCrossover
 from .crossover import TimeFeasibleCrossover
-
 from .my_types import DTO, DLO, DEBUG
 from .parent_selection import RouletteWheelSelection
 
@@ -27,6 +28,11 @@ class GeneticAlgorithm:
             self.crossover_strategy = TimeFeasibleCrossover()
         else:
             raise ValueError(f'Invalid crossover strategy: {crossover_strategy}, choose from "single" or "multi"')
+
+        # Set seed of random operations for debugging purposes
+        self.seed = random.randrange(sys.maxsize)
+        random.seed(self.seed)
+
         self.capacity = capacity
         self.downlink_rate = downlink_rate
         self.num_elites = num_elites
@@ -38,6 +44,8 @@ class GeneticAlgorithm:
         self.total_dlos: [DLO] = []
         if total_dlos is not None:
             self.total_dlos = total_dlos.copy()
+            for dlo in self.total_dlos:
+                dlo['downloaded_dtos'] = []
 
         self.ordered_dtos = sorted(total_dtos, key=lambda dto_: dto_['priority'], reverse=True)
         self.num_generations: int = num_generations
@@ -48,9 +56,10 @@ class GeneticAlgorithm:
 
         for i in range(num_chromosomes):
             chromosome = Chromosome(self.capacity, total_ars.copy(),
-                                    tot_dlos=self.total_dlos.copy(),
-                                    downlink_rate=self.downlink_rate)
-            shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
+                                    tot_dlos=self.total_dlos,
+                                    downlink_rate=self.downlink_rate,
+                                    seed=self.seed)
+            shuffled_dtos: [DTO] = random.sample(self.total_dtos, len(self.total_dtos))
 
             for dto in shuffled_dtos:
                 if chromosome.size() == 0 or chromosome.keeps_feasibility(dto):
@@ -62,7 +71,7 @@ class GeneticAlgorithm:
         """ Updates the elites for the current generation """
         self.elites = sorted(self.population,
                              key=lambda chromosome: chromosome.get_tot_fitness(),
-                             reverse=True)[: self.num_elites]
+                             reverse=True)[:self.num_elites]
 
     def parent_selection(self):
         """ Chooses and returns the chromosomes to make crossover with roulette wheel selection method """
@@ -80,7 +89,7 @@ class GeneticAlgorithm:
         for parent1, parent2 in self.parents:
             son_dtos = self.crossover_strategy.crossover(parent1, parent2)
             son = Chromosome(self.capacity, self.total_ars.copy(), son_dtos.copy(),
-                             self.total_dlos.copy(), self.downlink_rate)
+                             self.total_dlos.copy(), self.downlink_rate, seed=self.seed)
             sons.append(son)
             if DEBUG and not son.is_constraint_respected(Constraint.DUPLICATES):
                 raise Exception('The solution contains duplicates')
@@ -92,7 +101,7 @@ class GeneticAlgorithm:
         for chromosome in list(set(self.population) - set(self.elites)):
             # Replaces 10% of DTOs in the plan with new random DTOs
             for _ in range(len(chromosome.dtos) // 10):
-                new_dto = choice(self.total_dtos)
+                new_dto = random.choice(self.total_dtos)
                 chromosome.add_dto(new_dto)
 
     def update_downloaded_dtos(self):
@@ -119,15 +128,14 @@ class GeneticAlgorithm:
     def local_search(self):
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
         for chromosome in list(set(self.population) - set(self.elites)):
-            # dtos_to_insert = [dto for dto in self.ordered_dtos if dto not in chromosome.dtos]
-            for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]:
+            dtos_to_insert = [dto for dto in self.ordered_dtos if dto not in chromosome.dtos]
+            # for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]:
+            for dto in dtos_to_insert[:100]:
                 if len(self.total_dlos) == 0:
                     if chromosome.keeps_feasibility(dto):
                         chromosome.add_dto(dto)
                 else:
                     chromosome.add_and_download_dto(dto)
-                    if DEBUG and len(chromosome.get_ars_served()) > chromosome.ars_served.sum():
-                        raise Exception("There are repeated ARs in the plan")
 
     def run(self):
         """ Starts the algorithm itself """

@@ -1,4 +1,5 @@
 import collections
+import random
 from copy import deepcopy
 from typing import Optional
 
@@ -14,23 +15,21 @@ class Chromosome:
     """ A class that represents a possible solution of GeneticAlgorithm class """
 
     def __init__(self, capacity: float, ars: [AR], dtos: [DTO] = None,
-                 tot_dlos: [DLO] = None, downlink_rate: float = None) -> None:
+                 tot_dlos: [DLO] = None, downlink_rate: float = None, seed=None) -> None:
         """ If no argument is given, creates an empty solution, otherwise creates a solution with given DTOs """
         if dtos is None:
             dtos = []
         if tot_dlos is None:
             tot_dlos = []
         # Loads DTOs
-        self.dtos: [DTO] = [dto for dto in dtos]
+        self.dtos: [DTO] = deepcopy(dtos)
         self.dtos = sorted(self.dtos, key=lambda dto_: dto_['start_time'])
         # Loads ARs
-        self.ars: [AR] = [ar for ar in ars]
+        self.ars: [AR] = deepcopy(ars)
         # Loads DLOs
         self.dlos: [DLO] = []
-        for j in range(len(tot_dlos)):
-            dlo = tot_dlos[j].copy()
-            dlo['downloaded_dtos'] = []
-            self.dlos.append(dlo)
+        if tot_dlos is not None:
+            self.dlos = deepcopy(tot_dlos)
 
         self.dlos = sorted(self.dlos, key=lambda dlo_: dlo_['start_time'])
 
@@ -38,18 +37,18 @@ class Chromosome:
             self.ar_ids_served: [int] = []
             self.ars_served: ndarray = np.full(len(ars), False)
         else:
-            # self.ars_served: ndarray = np.full(len(ars), False)
-            # for dto in self.dtos:
-            #     self.ars_served[dto['ar_index']] = True
             self.ar_ids_served: [int] = [dto['ar_id'] for dto in self.dtos]
-            self.ars_served: ndarray = np.isin(np.array(list(map(lambda ar: ar['id'], self.ars))),
-                                               np.array(self.ar_ids_served))
+            self.ars_served: ndarray = np.isin(list(map(lambda ar: ar['id'], self.ars)),
+                                               self.ar_ids_served)
 
         self.fitness: float = sum(self.get_priorities())
         self.tot_memory: float = sum(self.get_memories())
 
         self.capacity: float = capacity
         self.downlink_rate: float = downlink_rate
+
+        random.seed(seed)
+        self.seed = seed
 
     def print(self) -> None:
         """ Prints all info about the solution """
@@ -141,7 +140,6 @@ class Chromosome:
             raise Exception("Plan is not feasible")
 
         backup_dlos = deepcopy(self.dlos)
-        # backup_dtos = deepcopy(self.dtos)
         self.add_dto(dto)
 
         if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
@@ -153,12 +151,12 @@ class Chromosome:
         dtos_in_memory: [DTO] = []
         i: int = 0
         j: int = 0
-        while i < len(self.dtos) and success and term_condition:
+        while i < len(self.dtos) and success: #and term_condition:
             # if the DTO comes before the DLO j, sum its memory
             if self.dtos[i]['stop_time'] < self.dlos[j]['start_time']:
                 memory = memory + self.dtos[i]['memory']
+                # print(f'At DTO {i}, memory is {memory}')
                 dtos_in_memory.append(self.dtos[i].copy())
-                # TODO: it can be optimized
                 if dto == self.dtos[i]:
                     added = True
                 # if memory exceed because the new DTO is added, stop iterating and return False
@@ -179,18 +177,19 @@ class Chromosome:
                     z: int = 0
                     while z < len(dtos_in_memory):
                         if self.is_dto_downloadable(dtos_in_memory[z], self.dlos[j], memory_downloaded):
+                            # if dto == dtos_in_memory[z]:
+                            #     downloaded = True
                             self.dlos[j]['downloaded_dtos'].append(dtos_in_memory[z].copy())
-                            # print(f'{memory - dtos_in_memory[z]["memory"]} = {memory} - {dtos_in_memory[z]["memory"]}')
-                            if dto == dtos_in_memory[z]:
-                                downloaded = True
                             memory -= dtos_in_memory[z]['memory']
                             memory_downloaded += dtos_in_memory[z]['memory']
                             dtos_in_memory.remove(dtos_in_memory[z].copy())
                             z -= 1
                         z += 1
 
-                    if downloaded and len(dtos_in_memory) == 0:
-                        term_condition = False
+                    # if downloaded and len(dtos_in_memory) == 0:
+                    #     term_condition = False
+
+                # print(f'At DLO {j}, memory is {memory}')
 
                 if DEBUG and memory < 0:
                     raise Exception('Memory is negative')
@@ -202,6 +201,7 @@ class Chromosome:
             self.dlos = backup_dlos
 
         if DEBUG and not self.is_feasible():
+            print("Seed was:", self.seed)
             raise Exception("Plan is not feasible")
 
         return success
@@ -224,11 +224,6 @@ class Chromosome:
         self.tot_memory -= dto['memory']
         self.fitness -= dto['priority']
 
-        # same_ar_dtos = [dto_ for dto_ in self.dtos if dto_['ar_id'] == dto['ar_id']]
-        # # if there aren't other dtos of the same AR, the AR is not served anymore
-        # if len(same_ar_dtos) == 0:
-        #     self.ars_served[dto['ar_index']] = False
-
         if dto['ar_id'] not in self.ar_ids_served:
             self.ars_served[dto['ar_index']] = False
 
@@ -238,9 +233,6 @@ class Chromosome:
 
     def keeps_feasibility(self, dto: DTO) -> bool:
         """ Returns True if the solution keeps feasibility if the DTO would be added """
-        # if len(self.dtos) > 0:
-        #     raise Exception("This method works only with relaxed problems")
-
         # Checks if the DTO would exceed the memory limit
         if self.get_tot_memory() + dto['memory'] > self.capacity:
             return False
@@ -292,21 +284,22 @@ class Chromosome:
                 memory: float = 0
                 i: int = 0
                 j: int = 0
+                # print("START CHECK")
                 while i < len(self.dtos):
                     # if the DTO comes before the DLO j, sum its memory
                     if self.dtos[i]['stop_time'] < self.dlos[j]['start_time']:
                         memory = memory + self.dtos[i]['memory']
+                        # print(f'At DTO {i}, memory {memory}')
                         # if memory exceed because the new DTO is added, stop iterating and return False
                         if memory > self.capacity:
-                            # print(f"Memory exceeded: {memory} at dto: {i} before dlo: {j}")
                             return False
                         i += 1
                     else:
                         for dto in self.dlos[j]['downloaded_dtos']:
                             memory = memory - dto['memory']
 
+                        # print(f'At DLO {j}, memory {memory}')
                         if memory < 0:
-                            # print(f"Memory exceeded in negative: {memory} at dlo: {j}")
                             return False
                         j += 1
 
@@ -396,12 +389,14 @@ class Chromosome:
         """ Repairs the single satisfaction constraint of the solution """
         ars_duplicate = [item for item, count in collections.Counter(self.get_ars_served()).items() if count > 1]
 
+        # for each AR that is served more than once, removes extra DTOs
         for ar_id in ars_duplicate:
             dtos_same_ar = [dto for dto in self.dtos if dto['ar_id'] == ar_id]
-            self.remove_dto(dtos_same_ar[0])
+            # removes the DTOs with same AR, except one
+            for dto in random.sample(dtos_same_ar, len(dtos_same_ar) - 1):
+                self.remove_dto(dto)
 
         if DEBUG and not self.is_feasible(Constraint.SINGLE_SATISFACTION):
-            print(f"ARS served: {len(self.get_ars_served())}, {self.ars_served.sum()}")
             raise Exception("Repair satisfaction failed")
 
     def update_downloaded_dtos(self):
