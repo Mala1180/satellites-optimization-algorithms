@@ -1,6 +1,4 @@
-from random import choices
-
-import numpy as np
+from random import choices, randint
 
 from heuristic.genetic.Chromosome import Chromosome
 from heuristic.genetic.parent_selection.ParentSelection import ParentSelection
@@ -18,5 +16,5 @@ class RouletteWheelSelection(ParentSelection):
         parent1 = choices(population, weights=self.selection_probs, k=1)[0]
 
         # picks the second parent randomly within the population
-        parent2 = population[np.random.randint(len(population))]
+        parent2 = population[randint(0, len(population) - 1)]
         return parent1, parent2

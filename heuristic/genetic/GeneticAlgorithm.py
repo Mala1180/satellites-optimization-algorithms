@@ -10,14 +10,15 @@ from .crossover import MultiPointCrossover
 from .crossover import SinglePointCrossover
 from .crossover import TimeFeasibleCrossover
 from .my_types import DTO, DLO, DEBUG
-from .parent_selection import RouletteWheelSelection
+from .parent_selection import RouletteWheelSelection, ParentSelection
 
 
 class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
     def __init__(self, capacity, total_dtos, total_ars, total_dlos=None, downlink_rate=None,
-                 num_generations=300, num_chromosomes=20, num_elites=3, crossover_strategy='time_feasible'):
+                 num_generations=300, num_chromosomes=20, num_elites=3,
+                 parent_selection_strategy='roulette', crossover_strategy='time_feasible'):
         """ Creates a random initial population and prepares data for the algorithm """
         if crossover_strategy == 'single':
             self.crossover_strategy: Crossover = SinglePointCrossover()
@@ -61,6 +62,12 @@ class GeneticAlgorithm:
 
             self.population.append(chromosome)
 
+        if parent_selection_strategy == 'roulette':
+            self.parent_selection_strategy: ParentSelection = RouletteWheelSelection(self.population)
+        else:
+            raise ValueError(f'Invalid parent selection strategy: {parent_selection_strategy}, the only implemented '
+                             f'is roulette wheel')
+
     def elitism(self):
         """ Updates the elites for the current generation """
         self.elites = sorted(self.population,
@@ -70,10 +77,10 @@ class GeneticAlgorithm:
     def parent_selection(self):
         """ Chooses and returns the chromosomes to make crossover with roulette wheel selection method """
         self.parents = []
-        parent_selection_strategy = RouletteWheelSelection(self.population)
+        self.parent_selection_strategy = RouletteWheelSelection(self.population)
         # finds number of couples equals to population length - elites length
         for i in range(len(self.population) - len(self.elites)):
-            parents: (Chromosome, Chromosome) = parent_selection_strategy.select(self.population)
+            parents: (Chromosome, Chromosome) = self.parent_selection_strategy.select(self.population)
             self.parents.append(parents)
 
     def crossover(self):
