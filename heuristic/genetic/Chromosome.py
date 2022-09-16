@@ -1,10 +1,11 @@
 import collections
-import random
+
 from copy import deepcopy
 from typing import Optional
 
 import numpy as np
 from matplotlib import pyplot as plt
+from random import sample
 
 from utils import Constraint
 from utils.functions import overlap, binary_search, find_insertion_point
@@ -15,7 +16,7 @@ class Chromosome:
     """ A class that represents a possible solution of GeneticAlgorithm class """
 
     def __init__(self, capacity: float, ars: [AR], dtos: [DTO] = None,
-                 tot_dlos: [DLO] = None, downlink_rate: float = None, seed=None) -> None:
+                 tot_dlos: [DLO] = None, downlink_rate: float = None) -> None:
         """ If no argument is given, creates an empty solution, otherwise creates a solution with given DTOs """
         if dtos is None:
             dtos = []
@@ -46,9 +47,6 @@ class Chromosome:
 
         self.capacity: float = capacity
         self.downlink_rate: float = downlink_rate
-
-        random.seed(seed)
-        self.seed = seed
 
     def print(self) -> None:
         """ Prints all info about the solution """
@@ -151,7 +149,7 @@ class Chromosome:
         dtos_in_memory: [DTO] = []
         i: int = 0
         j: int = 0
-        while i < len(self.dtos) and success: #and term_condition:
+        while i < len(self.dtos) and success:  # and term_condition:
             # if the DTO comes before the DLO j, sum its memory
             if self.dtos[i]['stop_time'] < self.dlos[j]['start_time']:
                 memory = memory + self.dtos[i]['memory']
@@ -201,7 +199,6 @@ class Chromosome:
             self.dlos = backup_dlos
 
         if DEBUG and not self.is_feasible():
-            print("Seed was:", self.seed)
             raise Exception("Plan is not feasible")
 
         return success
@@ -393,7 +390,7 @@ class Chromosome:
         for ar_id in ars_duplicate:
             dtos_same_ar = [dto for dto in self.dtos if dto['ar_id'] == ar_id]
             # removes the DTOs with same AR, except one
-            for dto in random.sample(dtos_same_ar, len(dtos_same_ar) - 1):
+            for dto in sample(dtos_same_ar, len(dtos_same_ar) - 1):
                 self.remove_dto(dto)
 
         if DEBUG and not self.is_feasible(Constraint.SINGLE_SATISFACTION):

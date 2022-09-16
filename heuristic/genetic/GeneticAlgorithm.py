@@ -1,12 +1,11 @@
-import random
-import sys
-# from random import sample, choice
+from random import sample, choice
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from utils import Constraint
 from . import Chromosome
+from .crossover import Crossover
 from .crossover import MultiPointCrossover
 from .crossover import SinglePointCrossover
 from .crossover import TimeFeasibleCrossover
@@ -18,20 +17,16 @@ class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
     def __init__(self, capacity, total_dtos, total_ars, total_dlos=None, downlink_rate=None,
-                 num_generations=300, num_chromosomes=30, num_elites=3, crossover_strategy='time_feasible'):
+                 num_generations=300, num_chromosomes=20, num_elites=3, crossover_strategy='time_feasible'):
         """ Creates a random initial population and prepares data for the algorithm """
         if crossover_strategy == 'single':
-            self.crossover_strategy = SinglePointCrossover()
+            self.crossover_strategy: Crossover = SinglePointCrossover()
         elif crossover_strategy == 'multi':
-            self.crossover_strategy = MultiPointCrossover()
+            self.crossover_strategy: Crossover = MultiPointCrossover()
         elif crossover_strategy == 'time_feasible':
-            self.crossover_strategy = TimeFeasibleCrossover()
+            self.crossover_strategy: Crossover = TimeFeasibleCrossover()
         else:
             raise ValueError(f'Invalid crossover strategy: {crossover_strategy}, choose from "single" or "multi"')
-
-        # Set seed of random operations for debugging purposes
-        self.seed = random.randrange(sys.maxsize)
-        random.seed(self.seed)
 
         self.capacity = capacity
         self.downlink_rate = downlink_rate
@@ -57,9 +52,8 @@ class GeneticAlgorithm:
         for i in range(num_chromosomes):
             chromosome = Chromosome(self.capacity, total_ars.copy(),
                                     tot_dlos=self.total_dlos,
-                                    downlink_rate=self.downlink_rate,
-                                    seed=self.seed)
-            shuffled_dtos: [DTO] = random.sample(self.total_dtos, len(self.total_dtos))
+                                    downlink_rate=self.downlink_rate)
+            shuffled_dtos: [DTO] = sample(self.total_dtos, len(self.total_dtos))
 
             for dto in shuffled_dtos:
                 if chromosome.size() == 0 or chromosome.keeps_feasibility(dto):
@@ -89,7 +83,7 @@ class GeneticAlgorithm:
         for parent1, parent2 in self.parents:
             son_dtos = self.crossover_strategy.crossover(parent1, parent2)
             son = Chromosome(self.capacity, self.total_ars.copy(), son_dtos.copy(),
-                             self.total_dlos.copy(), self.downlink_rate, seed=self.seed)
+                             self.total_dlos.copy(), self.downlink_rate)
             sons.append(son)
             if DEBUG and not son.is_constraint_respected(Constraint.DUPLICATES):
                 raise Exception('The solution contains duplicates')
@@ -101,7 +95,7 @@ class GeneticAlgorithm:
         for chromosome in list(set(self.population) - set(self.elites)):
             # Replaces 10% of DTOs in the plan with new random DTOs
             for _ in range(len(chromosome.dtos) // 10):
-                new_dto = random.choice(self.total_dtos)
+                new_dto = choice(self.total_dtos)
                 chromosome.add_dto(new_dto)
 
     def update_downloaded_dtos(self):
