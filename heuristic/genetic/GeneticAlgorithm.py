@@ -18,7 +18,7 @@ class GeneticAlgorithm:
     """ Implements the structure and methods of a genetic algorithm to solve satellite optimization problem """
 
     def __init__(self, capacity, total_dtos, total_ars, total_dlos=None, downlink_rate=None,
-                 num_generations=150, num_chromosomes=20, num_elites=3, crossover_strategy='time_feasible'):
+                 num_generations=300, num_chromosomes=30, num_elites=3, crossover_strategy='time_feasible'):
         """ Creates a random initial population and prepares data for the algorithm """
         if crossover_strategy == 'single':
             self.crossover_strategy = SinglePointCrossover()
@@ -120,17 +120,15 @@ class GeneticAlgorithm:
             if not chromosome.is_feasible(Constraint.MEMORY):
                 while not chromosome.repair_memory():
                     chromosome.update_downloaded_dtos()
-            for dlo in chromosome.dlos:
-                if DEBUG and len(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos']))) != len(
-                        set(list(map(lambda dto__: dto__['id'], dlo['downloaded_dtos'])))):
-                    raise Exception("There are repeated DTOs in a DLO")
 
     def local_search(self):
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
         for chromosome in list(set(self.population) - set(self.elites)):
-            dtos_to_insert = [dto for dto in self.ordered_dtos if dto not in chromosome.dtos]
+            # dtos_to_insert = [dto for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]
+            #                   if dto not in chromosome.dtos]
             # for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]:
-            for dto in dtos_to_insert[:100]:
+
+            for dto in self.ordered_dtos:
                 if len(self.total_dlos) == 0:
                     if chromosome.keeps_feasibility(dto):
                         chromosome.add_dto(dto)
