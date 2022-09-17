@@ -4,7 +4,7 @@ from heuristic.genetic.Chromosome import Chromosome
 from heuristic.genetic.crossover.Crossover import Crossover
 
 
-class TimeFeasibleCrossover(Crossover):
+class OrderedCrossover(Crossover):
 
     def crossover(self, parent1: Chromosome, parent2: Chromosome) -> [Chromosome]:
         random = choice(range(0, len(parent1.dtos)))

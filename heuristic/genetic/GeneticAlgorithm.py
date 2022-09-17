@@ -8,7 +8,7 @@ from . import Chromosome
 from .crossover import Crossover
 from .crossover import MultiPointCrossover
 from .crossover import SinglePointCrossover
-from .crossover import TimeFeasibleCrossover
+from .crossover import OrderedCrossover
 from .my_types import DTO, DLO, DEBUG
 from .parent_selection import RouletteWheelSelection, ParentSelection
 
@@ -18,14 +18,14 @@ class GeneticAlgorithm:
 
     def __init__(self, capacity, total_dtos, total_ars, total_dlos=None, downlink_rate=None,
                  num_generations=300, num_chromosomes=20, num_elites=3,
-                 parent_selection_strategy='roulette', crossover_strategy='time_feasible'):
+                 parent_selection_strategy='roulette', crossover_strategy='ordered'):
         """ Creates a random initial population and prepares data for the algorithm """
         if crossover_strategy == 'single':
             self.crossover_strategy: Crossover = SinglePointCrossover()
         elif crossover_strategy == 'multi':
             self.crossover_strategy: Crossover = MultiPointCrossover()
-        elif crossover_strategy == 'time_feasible':
-            self.crossover_strategy: Crossover = TimeFeasibleCrossover()
+        elif crossover_strategy == 'ordered':
+            self.crossover_strategy: Crossover = OrderedCrossover()
         else:
             raise ValueError(f'Invalid crossover strategy: {crossover_strategy}, choose from "single" or "multi"')
 
