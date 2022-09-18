@@ -3,6 +3,7 @@ from utils.functions import load_instance, overlap, add_dummy_dlo
 
 if __name__ == '__main__':
     INSTANCE = 'day1_40'
+    # INSTANCE = 'test_complete'
     dtos, ars, constants, paws, dlos = load_instance(INSTANCE)
 
     initial_dlos = dlos
@@ -18,11 +19,13 @@ if __name__ == '__main__':
         if not skip:
             filtered_dtos.append(dto)
 
-    dtos = filtered_dtos
+    dtos = sorted(filtered_dtos, key=lambda dto_: dto_['start_time'])
     dlos = sorted(dlos, key=lambda dlo_: dlo_['start_time'])
 
+    print(dlos[-1]['start_time'] > dtos[-1]['stop_time'])
     # add the dummy variable for the correct
     dlos = add_dummy_dlo(dtos, dlos)
+    print(dlos[-1]['start_time'] > dtos[-1]['stop_time'])
 
     CAPACITY = constants['MEMORY_CAP']
     DOWNLINK_RATE = constants['DOWNLINK_RATE']

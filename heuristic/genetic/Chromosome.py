@@ -151,6 +151,8 @@ class Chromosome:
         j: int = 0
         while i < len(self.dtos) and success:  # and term_condition:
             # if the DTO comes before the DLO j, sum its memory
+            # print(self.dlos[-1]['start_time'] > self.dtos[-1]['stop_time'])
+            # print("i: ", i, "j: ", j, "len(self.dtos): ", len(self.dtos), "len(self.dlos): ", len(self.dlos))
             if self.dtos[i]['stop_time'] < self.dlos[j]['start_time']:
                 memory = memory + self.dtos[i]['memory']
                 # print(f'At DTO {i}, memory is {memory}')
@@ -281,7 +283,7 @@ class Chromosome:
                 memory: float = 0
                 i: int = 0
                 j: int = 0
-                # print("START CHECK")
+
                 while i < len(self.dtos):
                     # if the DTO comes before the DLO j, sum its memory
                     if self.dtos[i]['stop_time'] < self.dlos[j]['start_time']:

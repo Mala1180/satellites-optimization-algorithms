@@ -3,8 +3,9 @@ from random import randint, randrange
 
 import numpy as np
 
-from .Instance import Instance
 from utils.functions import overlap
+from .Instance import Instance
+
 
 class InstanceBuilder:
 
@@ -22,9 +23,11 @@ class InstanceBuilder:
             raise ValueError("Wrong name parameter, must be a string")
         self.instance = Instance(name, start, duration)
 
-    def generate_constants(self, memory_cap: float, downlink_rate: float):
+    def generate_constants(self, memory_cap: float, downlink_rate: float = None):
         """ Generates the constants of the instance (memory_cap and downlink_rate) """
-        self.instance.constants = {'MEMORY_CAP': memory_cap, 'DOWNLINK_RATE': downlink_rate}
+        self.instance.constants = {'MEMORY_CAP': memory_cap}
+        if downlink_rate is not None:
+            self.instance.constants['DOWNLINK_RATE'] = downlink_rate
         return self
 
     def generate_ars_and_dtos(self, ars_length: int, dto_per_ar: int, std_dev: float, max_memory: float,
@@ -54,7 +57,7 @@ class InstanceBuilder:
                 self.instance.dtos.append({"id": counter_id, "ar_id": i,
                                            "start_time": random_start_date.timestamp(),
                                            "stop_time": random_end_date.timestamp(),
-                                           "memory": max_memory})
+                                           "memory": randint(5, max_memory)})
                 counter_id += 1
 
         self.instance.constants['NUM_DTOS'] = len(self.instance.dtos)
@@ -83,11 +86,12 @@ class InstanceBuilder:
 
         :param length: number of DLOs to generate
         """
-        for i in range(length):
+        i: int = 0
+        while i < length:
             random_start_date = self.instance.start + \
                                 timedelta(seconds=randrange(self.instance.time_between_dates.seconds))
             random_end_date = random_start_date + timedelta(seconds=randrange(100))
-            dlo = {"id": i,
+            dlo = {"id": i + 1,
                    "start_time": random_start_date.timestamp(),
                    "stop_time": random_end_date.timestamp()}
             skip = False
@@ -98,11 +102,9 @@ class InstanceBuilder:
 
             if not skip:
                 self.instance.dlos.append(dlo)
+            i += 1
+
         self.instance.constants['NUM_DLOS'] = length
-        for dlo1 in self.instance.dlos:
-            for dlo2 in self.instance.dlos:
-                if overlap(dlo1, dlo2):
-                    print("Overlap between {} and {}".format(dlo1, dlo2))
         return self
 
     def get_instance(self) -> Instance:

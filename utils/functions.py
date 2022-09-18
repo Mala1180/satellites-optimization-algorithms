@@ -35,17 +35,19 @@ def add_dummy_dlo(dtos, dlos):
     :param dlos: list of dlos
     :return: dlos with dummy dlo added
     """
-    stop_time = max(dtos[len(dtos) - 1]['stop_time'], dlos[len(dlos) - 1]['stop_time'])
-    dummy_dlo = dlos[len(dlos) - 1].copy()
+    ordered_dtos = sorted(dtos, key=lambda dto_: dto_['start_time'])
+    ordered_dlos = sorted(dlos, key=lambda dlo_: dlo_['start_time'])
+    stop_time = max(ordered_dtos[-1]['stop_time'], ordered_dlos[-1]['stop_time'])
+    dummy_dlo = ordered_dlos[-1].copy()
     dummy_dlo['start_time'] = stop_time + 1
     dummy_dlo['stop_time'] = dummy_dlo['start_time']
-    dlos.append(dummy_dlo)
-    return dlos
+    ordered_dlos.append(dummy_dlo)
+    return ordered_dlos
 
 
 def binary_search(dto, plan) -> int:
     """ Iterative implementation of binary search.
-        Returns index of dto in the given chromosome, -1 if not found """
+        Returns index of dto in the given plan, -1 if not found """
     low = 0
     high = len(plan) - 1
     while high >= low:

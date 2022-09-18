@@ -1,4 +1,4 @@
-from random import sample, choice
+from random import sample, choice, randint
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -100,10 +100,11 @@ class GeneticAlgorithm:
     def mutation(self):
         """ Mutates randomly the 10% of each chromosome in the population """
         for chromosome in list(set(self.population) - set(self.elites)):
-            # Replaces 10% of DTOs in the plan with new random DTOs
-            for _ in range(len(chromosome.dtos) // 10):
+            # Replaces 5% of DTOs in the plan with new random DTOs
+            for _ in range(len(chromosome.dtos) // 20):
                 new_dto = choice(self.total_dtos)
                 chromosome.add_dto(new_dto)
+                chromosome.remove_dto_at(randint(0, len(chromosome.dtos) - 1))
 
     def update_downloaded_dtos(self):
         for chromosome in list(set(self.population) - set(self.elites)):
@@ -128,12 +129,12 @@ class GeneticAlgorithm:
             # dtos_to_insert = [dto for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]
             #                   if dto not in chromosome.dtos]
             # for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]:
-
-            for dto in self.ordered_dtos:
-                if len(self.total_dlos) == 0:
+            if len(self.total_dlos) == 0:
+                for dto in self.ordered_dtos:
                     if chromosome.keeps_feasibility(dto):
                         chromosome.add_dto(dto)
-                else:
+            else:
+                for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]:
                     chromosome.add_and_download_dto(dto)
 
     def run(self):
