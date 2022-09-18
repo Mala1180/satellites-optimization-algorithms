@@ -1,9 +1,8 @@
 from genetic import GeneticAlgorithm
-from utils.functions import load_instance, overlap, add_dummy_dlo
+from utils.functions import load_instance, overlap, add_dummy_dlo, get_priorities
 
 if __name__ == '__main__':
     INSTANCE = 'day1_40'
-    # INSTANCE = 'test_complete'
     dtos, ars, constants, paws, dlos = load_instance(INSTANCE)
 
     initial_dlos = dlos
@@ -22,10 +21,8 @@ if __name__ == '__main__':
     dtos = sorted(filtered_dtos, key=lambda dto_: dto_['start_time'])
     dlos = sorted(dlos, key=lambda dlo_: dlo_['start_time'])
 
-    print(dlos[-1]['start_time'] > dtos[-1]['stop_time'])
     # add the dummy variable for the correct
     dlos = add_dummy_dlo(dtos, dlos)
-    print(dlos[-1]['start_time'] > dtos[-1]['stop_time'])
 
     CAPACITY = constants['MEMORY_CAP']
     DOWNLINK_RATE = constants['DOWNLINK_RATE']
@@ -33,11 +30,8 @@ if __name__ == '__main__':
     for i, ar in enumerate(ars):
         ar['index'] = i
 
-    priorities = []
-    # populate array of priorities
     for i, dto in enumerate(dtos):
-        priorities.append(next((ar['rank'] for ar in ars if ar['id'] == dto['ar_id']), None))
-        dto['priority'] = priorities[i]
+        dto['priority'] = next((ar['rank'] for ar in ars if ar['id'] == dto['ar_id']), None)
         dto['ar_index'] = next((ar['index'] for ar in ars if ar['id'] == dto['ar_id']), None)
 
     ga = GeneticAlgorithm(CAPACITY, dtos, ars, dlos, DOWNLINK_RATE)

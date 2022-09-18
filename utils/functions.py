@@ -39,7 +39,7 @@ def add_dummy_dlo(dtos, dlos):
     ordered_dlos = sorted(dlos, key=lambda dlo_: dlo_['start_time'])
     stop_time = max(ordered_dtos[-1]['stop_time'], ordered_dlos[-1]['stop_time'])
     dummy_dlo = ordered_dlos[-1].copy()
-    dummy_dlo['start_time'] = stop_time + 1
+    dummy_dlo['start_time'] = stop_time + 1000
     dummy_dlo['stop_time'] = dummy_dlo['start_time']
     ordered_dlos.append(dummy_dlo)
     return ordered_dlos

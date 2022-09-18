@@ -7,8 +7,8 @@ from heuristic.genetic.parent_selection.ParentSelection import ParentSelection
 class RouletteWheelSelection(ParentSelection):
 
     def __init__(self, population: [Chromosome]):
-        population_tot_fitness = sum([chromosome.get_tot_fitness() for chromosome in population])
-        self.selection_probs = [chromosome.get_tot_fitness() / population_tot_fitness
+        tot_fitness = sum([chromosome.get_fitness() for chromosome in population])
+        self.selection_probs = [chromosome.get_fitness() / tot_fitness
                                 for chromosome in population]
 
     def select(self, population: [Chromosome]) -> (Chromosome, Chromosome):

@@ -71,7 +71,7 @@ class GeneticAlgorithm:
     def elitism(self):
         """ Updates the elites for the current generation """
         self.elites = sorted(self.population,
-                             key=lambda chromosome: chromosome.get_tot_fitness(),
+                             key=lambda chromosome: chromosome.get_fitness(),
                              reverse=True)[:self.num_elites]
 
     def parent_selection(self):
@@ -149,13 +149,13 @@ class GeneticAlgorithm:
                 self.update_downloaded_dtos()
             self.repair()
             self.local_search()
-            chromosome_fitness = [chromosome.get_tot_fitness() for chromosome in self.population]
+            chromosome_fitness = [chromosome.get_fitness() for chromosome in self.population]
             self.fitness_history.append(chromosome_fitness)
             print(f'Fitness: {self.fitness_history[i]}')
 
     def get_best_solution(self) -> Chromosome:
         """ Returns the best solution in the population after running of the algorithm """
-        return max(self.population, key=lambda chromosome: chromosome.get_tot_fitness())
+        return max(self.population, key=lambda chromosome: chromosome.get_fitness())
 
     def print_population(self):
         """ Prints all solutions and the relative info """
@@ -163,7 +163,7 @@ class GeneticAlgorithm:
         for chromosome in self.population:
             print(f'   Len: {len(chromosome.dtos)}, ({chromosome.dtos},')
             print(f'    - Memory occupied: {chromosome.get_tot_memory()},')
-            print(f'    - Total priority: {chromosome.get_tot_fitness()}')
+            print(f'    - Total priority: {chromosome.get_fitness()}')
             print(f'    - Feasible: [MEMORY: {chromosome.is_feasible(Constraint.MEMORY)},'
                   f' OVERLAP: {chromosome.is_feasible(Constraint.OVERLAP)},'
                   f' SINGLE_SATISFACTION: {chromosome.is_feasible(Constraint.SINGLE_SATISFACTION)},'

@@ -24,11 +24,8 @@ if __name__ == '__main__':
     for i, ar in enumerate(ars):
         ar['index'] = i
 
-    priorities = []
-    # populate array of priorities
     for i, dto in enumerate(dtos):
-        priorities.append(next((ar['rank'] for ar in ars if ar['id'] == dto['ar_id']), None))
-        dto['priority'] = priorities[i]
+        dto['priority'] = next((ar['rank'] for ar in ars if ar['id'] == dto['ar_id']), None)
         dto['ar_index'] = next((ar['index'] for ar in ars if ar['id'] == dto['ar_id']), None)
 
     ga = GeneticAlgorithm(CAPACITY, dtos, ars)

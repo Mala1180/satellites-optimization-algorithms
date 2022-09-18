@@ -72,7 +72,7 @@ class Chromosome:
         """ Returns the total memory occupied of the solution """
         return self.tot_memory
 
-    def get_tot_fitness(self) -> float:
+    def get_fitness(self) -> float:
         """ Returns the fitness of the solution """
         return self.fitness
 
