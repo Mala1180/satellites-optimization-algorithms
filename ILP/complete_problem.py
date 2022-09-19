@@ -56,7 +56,7 @@ start = time.time()
 
 # add the decision variables to the model
 dtos_variables = list(model.addMVar((DTOS_NUMBER,), vtype=GRB.BINARY, name="DTOs"))
-dlos_variables = list(model.addMVar((DLOS_NUMBER,), vtype=GRB.BINARY, name="DLOs"))
+# dlos_variables = list(model.addMVar((DLOS_NUMBER,), vtype=GRB.BINARY, name="DLOs"))
 
 z_ji = []
 for index in range(DLOS_NUMBER):

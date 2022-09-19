@@ -9,7 +9,7 @@ from random import sample
 
 from utils import Constraint
 from utils.functions import overlap, binary_search, find_insertion_point
-from .my_types import DTO, AR, DLO, ndarray, DEBUG
+from .my_types import DTO, AR, DLO, DEBUG
 
 
 class Chromosome:
@@ -36,10 +36,10 @@ class Chromosome:
 
         if len(self.dtos) == 0:
             self.ar_ids_served: [int] = []
-            self.ars_served: ndarray = np.full(len(ars), False)
+            self.ars_served = np.full(len(ars), False)
         else:
             self.ar_ids_served: [int] = [dto['ar_id'] for dto in self.dtos]
-            self.ars_served: ndarray = np.isin(list(map(lambda ar: ar['id'], self.ars)),
+            self.ars_served = np.isin(list(map(lambda ar: ar['id'], self.ars)),
                                                self.ar_ids_served)
 
         self.fitness: float = sum(self.get_priorities())
@@ -151,11 +151,8 @@ class Chromosome:
         j: int = 0
         while i < len(self.dtos) and success:  # and term_condition:
             # if the DTO comes before the DLO j, sum its memory
-            # print(self.dlos[-1]['start_time'] > self.dtos[-1]['stop_time'])
-            # print("i: ", i, "j: ", j, "len(self.dtos): ", len(self.dtos), "len(self.dlos): ", len(self.dlos))
             if self.dtos[i]['stop_time'] < self.dlos[j]['start_time']:
                 memory = memory + self.dtos[i]['memory']
-                # print(f'At DTO {i}, memory is {memory}')
                 dtos_in_memory.append(self.dtos[i].copy())
                 if dto == self.dtos[i]:
                     added = True
@@ -177,19 +174,12 @@ class Chromosome:
                     z: int = 0
                     while z < len(dtos_in_memory):
                         if self.is_dto_downloadable(dtos_in_memory[z], self.dlos[j], memory_downloaded):
-                            # if dto == dtos_in_memory[z]:
-                            #     downloaded = True
                             self.dlos[j]['downloaded_dtos'].append(dtos_in_memory[z].copy())
                             memory -= dtos_in_memory[z]['memory']
                             memory_downloaded += dtos_in_memory[z]['memory']
                             dtos_in_memory.remove(dtos_in_memory[z].copy())
                             z -= 1
                         z += 1
-
-                    # if downloaded and len(dtos_in_memory) == 0:
-                    #     term_condition = False
-
-                # print(f'At DLO {j}, memory is {memory}')
 
                 if DEBUG and memory < 0:
                     raise Exception('Memory is negative')
@@ -288,7 +278,6 @@ class Chromosome:
                     # if the DTO comes before the DLO j, sum its memory
                     if self.dtos[i]['stop_time'] < self.dlos[j]['start_time']:
                         memory = memory + self.dtos[i]['memory']
-                        # print(f'At DTO {i}, memory {memory}')
                         # if memory exceed because the new DTO is added, stop iterating and return False
                         if memory > self.capacity:
                             return False
@@ -297,7 +286,6 @@ class Chromosome:
                         for dto in self.dlos[j]['downloaded_dtos']:
                             memory = memory - dto['memory']
 
-                        # print(f'At DLO {j}, memory {memory}')
                         if memory < 0:
                             return False
                         j += 1

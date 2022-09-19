@@ -126,15 +126,16 @@ class GeneticAlgorithm:
     def local_search(self):
         """ Performs local search on the population. Tries to insert new DTOs in the plan. """
         for chromosome in list(set(self.population) - set(self.elites)):
-            # dtos_to_insert = [dto for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]
-            #                   if dto not in chromosome.dtos]
-            # for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]:
+
             if len(self.total_dlos) == 0:
                 for dto in self.ordered_dtos:
                     if chromosome.keeps_feasibility(dto):
                         chromosome.add_dto(dto)
             else:
-                for dto in self.ordered_dtos[:len(self.ordered_dtos) // 4]:
+                dtos_to_insert = [dto for dto in self.ordered_dtos[:len(self.ordered_dtos) // 2]
+                                  if dto not in chromosome.dtos]
+                for dto in dtos_to_insert:
+                    # for dto in self.ordered_dtos:
                     chromosome.add_and_download_dto(dto)
 
     def run(self):

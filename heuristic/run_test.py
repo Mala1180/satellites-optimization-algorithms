@@ -43,10 +43,6 @@ if __name__ == '__main__':
         print(f'Run {i + 1} Result: {solution} in {end - start} seconds')
 
 
-    plt.plot([result[0] for result in partial_results], label='Partial Problem')
-    plt.legend()
-    plt.show()
-
     INSTANCE = 'day1_40'
     dtos, ars, constants, paws, dlos = load_instance(INSTANCE)
 
@@ -92,10 +88,13 @@ if __name__ == '__main__':
 
     print(f'Partial Results: {partial_results}')
     print(f'Partial Average Result: {sum([result[0] for result in partial_results]) / len(partial_results)}')
+    print(f'Partial Average Time: {sum([result[1] for result in partial_results]) / len(partial_results)}')
     print(f'Partial Best Result: {max(partial_results, key=lambda result: result[0])}')
 
     print(f'Complete Results: {complete_results}')
     print(f'Complete Average Result: {sum([result[0] for result in complete_results]) / len(complete_results)}')
+    print(f'Complete Average Time: {sum([result[1] for result in complete_results]) / len(complete_results)}')
+
     print(f'Complete Best Result: {max(complete_results, key=lambda result: result[0])}')
 
     plt.plot([result[0] for result in partial_results], label='Partial Problem')
