@@ -40,7 +40,7 @@ class Chromosome:
         else:
             self.ar_ids_served: [int] = [dto['ar_id'] for dto in self.dtos]
             self.ars_served = np.isin(list(map(lambda ar: ar['id'], self.ars)),
-                                               self.ar_ids_served)
+                                      self.ar_ids_served)
 
         self.fitness: float = sum(self.get_priorities())
         self.tot_memory: float = sum(self.get_memories())
@@ -108,8 +108,6 @@ class Chromosome:
         self.fitness += dto['priority']
         self.ars_served[dto['ar_index']] = True
         self.ar_ids_served.append(dto['ar_id'])
-        if len(self.get_ars_served()) != len(self.dtos):
-            raise Exception("Error: ARs served and DTOs served are not equal")
         return True
 
     def add_and_download_dto(self, dto: DTO) -> bool:
@@ -134,14 +132,8 @@ class Chromosome:
             if overlap(dto, self.dtos[insertion_index - 1]) or overlap(dto, self.dtos[insertion_index]):
                 return False
 
-        if DEBUG and not self.is_feasible():
-            raise Exception("Plan is not feasible")
-
         backup_dlos = deepcopy(self.dlos)
         self.add_dto(dto)
-
-        if not self.is_feasible(Constraint.SINGLE_SATISFACTION):
-            raise Exception("Single satisfaction violated")
 
         memory: float = 0
         added, downloaded, term_condition = False, False, True
@@ -180,10 +172,6 @@ class Chromosome:
                             dtos_in_memory.remove(dtos_in_memory[z].copy())
                             z -= 1
                         z += 1
-
-                if DEBUG and memory < 0:
-                    raise Exception('Memory is negative')
-
                 j += 1
 
         if not success:
@@ -383,9 +371,6 @@ class Chromosome:
             for dto in sample(dtos_same_ar, len(dtos_same_ar) - 1):
                 self.remove_dto(dto)
 
-        if DEBUG and not self.is_feasible(Constraint.SINGLE_SATISFACTION):
-            raise Exception("Repair satisfaction failed")
-
     def update_downloaded_dtos(self):
         memory: float = 0
         downloadable_dtos: [DTO] = []
@@ -412,8 +397,6 @@ class Chromosome:
                 if self.is_dto_downloadable(dto, dlo, memory_downloaded):
                     dlo['downloaded_dtos'].append(dto.copy())
                     memory = memory - dto['memory']
-                    if DEBUG and memory < 0:
-                        raise Exception('Memory is negative')
                     memory_downloaded += dto['memory']
                     downloadable_dtos.remove(dto)
                     i -= 1
