@@ -1,8 +1,8 @@
 from genetic import GeneticAlgorithm
-from utils.functions import load_instance, overlap, add_dummy_dlo, get_priorities
+from utils.functions import load_instance, overlap, add_dummy_dlo
 
 if __name__ == '__main__':
-    INSTANCE = 'day1_40'
+    INSTANCE = 'test_large_complete'
     dtos, ars, constants, paws, dlos = load_instance(INSTANCE)
 
     initial_dlos = dlos

@@ -136,12 +136,12 @@ class Chromosome:
         self.add_dto(dto)
 
         memory: float = 0
-        added, downloaded, term_condition = False, False, True
+        added = False
         success: bool = True
         dtos_in_memory: [DTO] = []
         i: int = 0
         j: int = 0
-        while i < len(self.dtos) and success:  # and term_condition:
+        while i < len(self.dtos) and success:
             # if the DTO comes before the DLO j, sum its memory
             if self.dtos[i]['stop_time'] < self.dlos[j]['start_time']:
                 memory = memory + self.dtos[i]['memory']

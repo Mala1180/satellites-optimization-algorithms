@@ -8,7 +8,7 @@ from gurobipy import GRB
 
 from utils.functions import overlap, load_instance, add_dummy_dlo
 
-INSTANCE = 'day1_40'
+INSTANCE = 'test_large_complete'
 dtos, ars, constants, paws, dlos = load_instance(INSTANCE)
 
 initial_dlos = dlos
@@ -154,6 +154,7 @@ if model.Status == GRB.INF_OR_UNBD:
 if model.Status == GRB.OPTIMAL:
     print('Optimal objective: %g' % model.ObjVal)
     print(f'Number of constraints: {len(model.getConstrs())}')
+    print(f'Number of Variables {len(model.getVars())}')
     json_solution = json.loads(model.getJSONSolution())
     print(json_solution)
 

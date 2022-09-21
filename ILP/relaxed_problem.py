@@ -89,6 +89,7 @@ if model.Status == GRB.OPTIMAL:
     print('Optimal objective: %g' % model.ObjVal)
     print(model.getJSONSolution())
     print(f'Number of constraints: {len(model.getConstrs())}')
+    print(f'Number of Variables {len(model.getVars())}')
 elif model.Status != GRB.INFEASIBLE:
     print('Optimization was stopped with status %d' % model.Status)
 
