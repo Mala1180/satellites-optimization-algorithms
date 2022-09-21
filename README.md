@@ -13,13 +13,19 @@ export PYTHONPATH=.
 
 ### Heuristic solution:
 
+For the partial problem:
 ```console
 python heuristic/relaxed_problem.py
 ```
 
+For the complete problem:
+```console
+python heuristic/complete_problem.py
+```
+
 ### Mathematical solution:
 
-For the relaxed problem:
+For the partial problem:
 ```console
 python ILP/relaxed_problem.py
 ```

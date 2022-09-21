@@ -135,7 +135,6 @@ class GeneticAlgorithm:
                 dtos_to_insert = [dto for dto in self.ordered_dtos[:len(self.ordered_dtos) // 2]
                                   if dto not in chromosome.dtos]
                 for dto in dtos_to_insert:
-                    # for dto in self.ordered_dtos:
                     chromosome.add_and_download_dto(dto)
 
     def run(self):
