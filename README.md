@@ -14,7 +14,7 @@ The complete problem also includes the possibility to downlink the acquisitions 
 The satellite ha a downlink rate. Acquisitions can be downloaded in different Downlink Opportunities (DLOs), which has a time window.
 
 In the ILP directory you can find the exact solution of the partial problem (without DLOs) and the complete problem as well.\
-In the heuristic directory you can find the heuristic solution implemented with a genetic algorithm.g
+In the heuristic directory you can find the heuristic solution implemented with a genetic algorithm.
 
 ## Usage
 
