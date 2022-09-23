@@ -1,6 +1,6 @@
 # satellites-optimization-algorithm
 
-This repository contains different algorithms (mathematical and heuristic) to optimize a problem of satellites acquisition planning.\
+This repository contains different algorithms (mathematical and heuristic) to optimize a problem of satellites acquisition planning.
 
 The problem is defined as follows:\
 At the start of planning is given a series of acquisition requests (AR) which have to be performed by the satellite.
@@ -14,7 +14,7 @@ The complete problem also includes the possibility to downlink the acquisitions 
 The satellite ha a downlink rate. Acquisitions can be downloaded in different Downlink Opportunities (DLOs), which has a time window.
 
 In the ILP directory you can find the exact solution of the partial problem (without DLOs) and the complete problem as well.\
-In the heuristic directory you can find the heuristic solution implemented with a genetic algorithm.
+In the heuristic directory you can find the heuristic solution implemented with a genetic algorithm.g
 
 ## Usage
 
