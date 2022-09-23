@@ -6,7 +6,8 @@ from gurobipy import GRB
 
 from utils.functions import overlap, load_instance
 
-dtos, ars, constants, paws = load_instance('day1_0')[:4]
+INSTANCE = 'day1_0'
+dtos, ars, constants, paws = load_instance(INSTANCE)[:4]
 
 # get rid of dtos overlapping with paws and dlos
 filtered_dtos = []
