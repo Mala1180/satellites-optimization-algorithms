@@ -3,7 +3,7 @@ from utils.functions import load_instance, overlap
 
 
 if __name__ == '__main__':
-    INSTANCE = 'day1_0'
+    INSTANCE = 'test_partial'
     dtos, ars, constants, paws = load_instance(INSTANCE)[:4]
 
     # get rid of dtos overlapping with paws

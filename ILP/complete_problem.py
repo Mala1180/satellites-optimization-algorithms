@@ -8,7 +8,7 @@ from gurobipy import GRB
 
 from utils.functions import overlap, load_instance, add_dummy_dlo
 
-INSTANCE = 'day1_40'
+INSTANCE = 'test_complete'
 dtos, ars, constants, paws, dlos = load_instance(INSTANCE)
 
 initial_dlos = dlos
